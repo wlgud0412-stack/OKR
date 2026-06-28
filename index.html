@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitCoach AI — OKR 기반 운동 관리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- 온보딩 & 목표 설정 -->
+  <div id="setup-flow" class="setup-flow">
+    <div class="setup-container">
+      <div class="setup-brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <strong>FitCoach AI</strong>
+          <span>OKR 기반 운동 코치</span>
+        </div>
+      </div>
+
+      <div class="setup-steps">
+        <span class="setup-step active" data-step="1">1. 기본 정보</span>
+        <span class="setup-step" data-step="2">2. 목표 설정</span>
+        <span class="setup-step" data-step="3">3. AI 계획 생성</span>
+      </div>
+
+      <!-- Step 1: 온보딩 -->
+      <section class="setup-page active" id="setup-onboarding">
+        <h1>기본 정보 입력</h1>
+        <p class="setup-desc">맞춤 운동 계획을 위해 정보를 입력해주세요.</p>
+        <form class="form setup-form" id="onboarding-form">
+          <div class="form-grid">
+            <label>
+              이름
+              <input type="text" name="name" required placeholder="홍길동" />
+            </label>
+            <label>
+              나이
+              <input type="number" name="age" min="14" max="100" required placeholder="28" />
+            </label>
+            <label>
+              성별
+              <select name="gender" required>
+                <option value="">선택</option>
+                <option value="남성">남성</option>
+                <option value="여성">여성</option>
+              </select>
+            </label>
+            <label>
+              키 (cm)
+              <input type="number" name="height" min="100" max="250" required placeholder="175" />
+            </label>
+            <label>
+              몸무게 (kg)
+              <input type="number" name="weight" step="0.1" min="30" max="300" required placeholder="75" />
+            </label>
+            <label>
+              체지방률 (%) <span class="optional">선택</span>
+              <input type="number" name="bodyFat" step="0.1" min="3" max="60" placeholder="25" />
+            </label>
+            <label>
+              운동 경력
+              <select name="experience" required>
+                <option value="">선택</option>
+                <option value="초급">초급</option>
+                <option value="중급">중급</option>
+                <option value="고급">고급</option>
+              </select>
+            </label>
+            <label>
+              운동 목적
+              <select name="purpose" required>
+                <option value="">선택</option>
+                <option value="다이어트">다이어트</option>
+                <option value="근비대">근비대</option>
+                <option value="체력 향상">체력 향상</option>
+                <option value="유지">유지</option>
+              </select>
+            </label>
+            <label class="full-width">
+              운동 가능 요일
+              <div class="day-checkboxes" id="day-checkboxes">
+                <label class="day-check"><input type="checkbox" name="days" value="월" /> 월</label>
+                <label class="day-check"><input type="checkbox" name="days" value="화" /> 화</label>
+                <label class="day-check"><input type="checkbox" name="days" value="수" /> 수</label>
+                <label class="day-check"><input type="checkbox" name="days" value="목" /> 목</label>
+                <label class="day-check"><input type="checkbox" name="days" value="금" /> 금</label>
+                <label class="day-check"><input type="checkbox" name="days" value="토" /> 토</label>
+                <label class="day-check"><input type="checkbox" name="days" value="일" /> 일</label>
+              </div>
+            </label>
+            <label>
+              하루 운동 가능 시간
+              <select name="availableTime" required>
+                <option value="">선택</option>
+                <option value="30분">30분</option>
+                <option value="1시간">1시간</option>
+                <option value="1시간 30분">1시간 30분</option>
+                <option value="2시간">2시간</option>
+              </select>
+            </label>
+            <label>
+              헬스장 이용 여부
+              <select name="gym" required>
+                <option value="">선택</option>
+                <option value="true">이용함</option>
+                <option value="false">이용 안 함</option>
+              </select>
+            </label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">다음 →</button>
+        </form>
+      </section>
+
+      <!-- Step 2: 목표 설정 -->
+      <section class="setup-page" id="setup-goals">
+        <h1>목표 설정</h1>
+        <p class="setup-desc">달성하고 싶은 목표를 설정해주세요. AI가 OKR 기반 계획을 생성합니다.</p>
+        <form class="form setup-form" id="goals-form">
+          <div class="form-grid">
+            <label>
+              목표 체중 (kg)
+              <input type="number" name="targetWeight" step="0.1" min="30" max="300" required />
+            </label>
+            <label>
+              목표 체지방률 (%) <span class="optional">선택</span>
+              <input type="number" name="targetBodyFat" step="0.1" min="3" max="60" placeholder="18" />
+            </label>
+            <label>
+              목표 달성 기간 (개월)
+              <input type="number" name="periodMonths" min="1" max="24" value="6" required />
+            </label>
+            <label>
+              운동 목표
+              <input type="text" name="workoutGoal" placeholder="예: 운동 습관 형성, 마라톤 완주" required />
+            </label>
+            <label>
+              주간 운동 횟수
+              <input type="number" name="weeklyWorkouts" min="1" max="7" value="5" required />
+            </label>
+            <label>
+              주간 러닝 거리 (km)
+              <input type="number" name="weeklyRunningKm" min="0" max="200" step="0.5" value="20" required />
+            </label>
+            <label class="full-width">
+              기타 개인 목표 <span class="optional">선택</span>
+              <input type="text" name="customGoal" placeholder="예: 5km 25분 이내 달리기" />
+            </label>
+          </div>
+          <div class="setup-actions">
+            <button type="button" class="btn btn-ghost" id="goals-back-btn">← 이전</button>
+            <button type="submit" class="btn btn-primary">목표 저장 & AI 계획 생성</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Step 3: AI 생성 중 -->
+      <section class="setup-page" id="setup-generating">
+        <div class="generating-wrap">
+          <div class="generating-spinner"></div>
+          <h2>AI가 맞춤 계획을 생성하고 있습니다</h2>
+          <p id="generating-status">목표 분석 중...</p>
+          <ul class="generating-steps">
+            <li id="gen-step-1">✓ OKR 목표 구조화</li>
+            <li id="gen-step-2">운동 루틴 생성</li>
+            <li id="gen-step-3">식단 계획 생성</li>
+            <li id="gen-step-4">대시보드 준비</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- 메인 앱 -->
+  <div class="app hidden" id="main-app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <strong>FitCoach AI</strong>
+          <span>OKR 운동 코치</span>
+        </div>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-page="today">
+          <span class="nav-icon">📅</span> 오늘
+        </button>
+        <button class="nav-item" data-page="log">
+          <span class="nav-icon">📝</span> 기록
+        </button>
+        <button class="nav-item" data-page="progress">
+          <span class="nav-icon">📊</span> 진행률
+        </button>
+        <button class="nav-item" data-page="goals">
+          <span class="nav-icon">🎯</span> 목표
+        </button>
+        <button class="nav-item" data-page="profile">
+          <span class="nav-icon">👤</span> 프로필
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="streak-card">
+          <span>🔥 연속 운동</span>
+          <strong id="streak-count">0일</strong>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="greeting" id="greeting">안녕하세요</p>
+          <h1 id="page-title">오늘의 Action Plan</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="date-badge date-picker-btn" id="date-picker-btn" type="button">
+            <span id="today-date"></span>
+            <span class="date-picker-icon">📅</span>
+          </button>
+          <button class="btn btn-ghost" id="coach-btn">AI 코치</button>
+        </div>
+      </header>
+
+      <div class="date-picker-popup hidden" id="date-picker-popup">
+        <div class="date-picker-header">
+          <button type="button" class="cal-nav-btn" id="cal-prev" aria-label="이전 달">◀</button>
+          <strong id="cal-month-label">2026년 7월</strong>
+          <button type="button" class="cal-nav-btn" id="cal-next" aria-label="다음 달">▶</button>
+          <button type="button" class="btn-icon" id="date-picker-close">✕</button>
+        </div>
+        <div class="calendar-weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <button type="button" class="btn btn-ghost btn-full" id="date-picker-today">오늘로 이동</button>
+      </div>
+
+      <section class="page active" id="page-today">
+        <div class="coach-banner">
+          <div class="coach-avatar">🤖</div>
+          <div class="coach-message" id="coach-message"></div>
+        </div>
+
+        <div class="card dashboard-card">
+          <div class="card-header">
+            <h2 id="dashboard-title">오늘의 대시보드</h2>
+            <span class="badge badge-ai">실시간</span>
+          </div>
+          <div class="dashboard-grid" id="today-dashboard"></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header">
+              <h2 id="workout-section-title">오늘의 운동</h2>
+              <span class="badge" id="workout-progress-badge">0/0</span>
+            </div>
+            <ul class="checklist" id="workout-list"></ul>
+            <div class="daily-progress" id="workout-daily-progress"></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2 id="nutrition-section-title">오늘의 식단</h2>
+              <span class="badge badge-nutrition" id="nutrition-cal-badge">0 kcal</span>
+            </div>
+            <div class="nutrition-summary" id="nutrition-summary"></div>
+          </div>
+        </div>
+
+        <div class="card" id="meal-log-card">
+          <div class="card-header">
+            <h2 id="meal-log-title">식단 기록</h2>
+            <span class="text-muted">AI 영양 분석</span>
+          </div>
+          <form class="meal-add-form" id="meal-add-form">
+            <select name="mealType" required>
+              <option value="breakfast">아침</option>
+              <option value="lunch">점심</option>
+              <option value="snack">간식</option>
+              <option value="dinner">저녁</option>
+            </select>
+            <input type="text" name="foodName" placeholder="예: 삶은 계란 2개, 바나나 1개" required />
+            <button type="submit" class="btn btn-primary">추가</button>
+          </form>
+          <div class="meal-sections" id="meal-sections"></div>
+        </div>
+
+        <div class="card ai-feedback-card">
+          <div class="card-header">
+            <h2>AI 피드백</h2>
+            <span class="badge badge-ai">자동 분석</span>
+          </div>
+          <div id="today-ai-feedback"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>목표 연결</h2>
+            <span class="text-muted">장기 → 오늘</span>
+          </div>
+          <div class="goal-chain" id="goal-chain"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-goals">
+        <div class="card objective-card">
+          <p class="label">Objective</p>
+          <h2 id="objective-title">-</h2>
+          <div class="progress-ring-wrap">
+            <svg class="progress-ring" viewBox="0 0 120 120">
+              <circle class="ring-bg" cx="60" cy="60" r="52" />
+              <circle class="ring-fill" id="objective-ring" cx="60" cy="60" r="52" />
+            </svg>
+            <div class="ring-label">
+              <strong id="objective-percent">0%</strong>
+              <span>달성률</span>
+            </div>
+          </div>
+        </div>
+
+        <h2 class="section-heading">목표 진행 현황</h2>
+        <div class="goal-cards grid-2">
+          <div class="card goal-metric-card" id="goal-weight-card"></div>
+          <div class="card goal-metric-card" id="goal-bodyfat-card"></div>
+        </div>
+
+        <div class="card">
+          <h2>Key Results</h2>
+          <div class="kr-list" id="kr-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>목표 분해 타임라인</h2>
+          <div class="timeline" id="goal-timeline"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-log">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h2>주간 운동 수행률</h2>
+              <p class="text-muted week-range-label" id="log-weekly-range"></p>
+            </div>
+            <span class="badge" id="log-weekly-pct">0%</span>
+          </div>
+          <div class="weekly-summary" id="log-weekly-summary"></div>
+          <div class="bar-chart" id="log-weekly-chart"></div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h2>운동 기록</h2>
+            <form class="form" id="workout-form">
+              <label>
+                운동 종류
+                <select name="type" required>
+                  <option value="러닝">러닝</option>
+                  <option value="웨이트">웨이트</option>
+                  <option value="유산소">유산소</option>
+                  <option value="스트레칭">스트레칭</option>
+                </select>
+              </label>
+              <label>
+                시간 (분)
+                <input type="number" name="duration" min="1" placeholder="30" required />
+              </label>
+              <label>
+                거리 (km) <span class="optional">러닝 시</span>
+                <input type="number" name="distance" step="0.1" min="0" placeholder="5" />
+              </label>
+              <label>
+                강도
+                <select name="intensity">
+                  <option value="낮음">낮음</option>
+                  <option value="보통" selected>보통</option>
+                  <option value="높음">높음</option>
+                </select>
+              </label>
+              <button type="submit" class="btn btn-primary">운동 기록 추가</button>
+            </form>
+          </div>
+          <div class="card">
+            <h2>체중 · 체지방률 기록</h2>
+            <form class="form" id="body-form">
+              <label>
+                날짜
+                <input type="date" name="recordDate" required />
+              </label>
+              <label>
+                체중 (kg)
+                <input type="number" name="weight" step="0.1" required />
+              </label>
+              <label>
+                체지방률 (%) <span class="optional">선택</span>
+                <input type="number" name="bodyFat" step="0.1" min="3" max="60" placeholder="22.5" />
+              </label>
+              <button type="submit" class="btn btn-primary">저장</button>
+            </form>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <h2>체중 변화</h2>
+            <div id="log-weight-chart"></div>
+          </div>
+          <div class="card">
+            <h2>체지방률 변화</h2>
+            <div id="log-bodyfat-chart"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>체중 · 체지방률 기록 목록</h2>
+          <div class="metrics-table-wrap" id="metrics-table"></div>
+        </div>
+        <div class="card">
+          <h2>최근 기록</h2>
+          <div class="log-history" id="log-history"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-progress">
+        <div class="card dashboard-card">
+          <div class="card-header">
+            <h2>오늘의 현황</h2>
+            <span class="badge badge-ai">실시간</span>
+          </div>
+          <div id="progress-dashboard"></div>
+        </div>
+        <div class="stats-grid" id="stats-grid"></div>
+        <div class="grid-2">
+          <div class="card">
+            <h2>체중 변화</h2>
+            <div id="weight-chart"></div>
+          </div>
+          <div class="card">
+            <h2>체지방률 변화</h2>
+            <div id="bodyfat-chart"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>주간 운동 수행률</h2>
+          <div class="bar-chart" id="weekly-chart"></div>
+        </div>
+        <div class="card ai-feedback-card">
+          <div class="card-header">
+            <h2>AI 피드백</h2>
+            <span class="badge badge-ai">자동 분석</span>
+          </div>
+          <div id="ai-feedback-list"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-profile">
+        <div class="card">
+          <h2>내 정보</h2>
+          <div class="profile-grid" id="profile-grid"></div>
+        </div>
+        <div class="card">
+          <h2>설정된 목표</h2>
+          <div class="profile-grid" id="goals-grid"></div>
+        </div>
+        <div class="card">
+          <button type="button" class="btn btn-ghost btn-danger" id="reset-btn">처음부터 다시 시작</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <nav class="mobile-nav hidden" id="mobile-nav">
+    <button class="mobile-nav-item active" data-page="today">📅<span>오늘</span></button>
+    <button class="mobile-nav-item" data-page="log">📝<span>기록</span></button>
+    <button class="mobile-nav-item" data-page="progress">📊<span>진행</span></button>
+    <button class="mobile-nav-item" data-page="goals">🎯<span>목표</span></button>
+    <button class="mobile-nav-item" data-page="profile">👤<span>프로필</span></button>
+  </nav>
+
+  <script src="js/data.js"></script>
+  <script src="js/nutrition.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

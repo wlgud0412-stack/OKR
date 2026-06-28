@@ -1,0 +1,23 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Local env / secrets
+.env
+.env.*
+
+# Python (parent folder scripts, if any)
+__pycache__/
+*.pyc
+.venv/
+venv/
