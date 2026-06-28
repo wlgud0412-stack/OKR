@@ -1,0 +1,6 @@
+{
+  "github": "https://github.com/wlgud0412-stack/OKR",
+  "githubRemote": "https://github.com/wlgud0412-stack/OKR.git",
+  "branch": "main",
+  "vercelNote": "GitHub push 후 Vercel이 1~2분 내 자동 배포합니다. Vercel 대시보드에서 Live URL을 확인하세요."
+}

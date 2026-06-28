@@ -38,6 +38,7 @@ function showMainApp() {
   initMealForm();
   initCoachBtn();
   initResetBtn();
+  initAppVersion();
 }
 
 function showSetupPage(page) {
@@ -1218,6 +1219,19 @@ function initCoachBtn() {
     });
     document.querySelector(".coach-banner")?.scrollIntoView({ behavior: "smooth" });
   });
+}
+
+function initAppVersion() {
+  const el = document.getElementById("app-version");
+  if (!el) return;
+  fetch(`version.json?v=${Date.now()}`)
+    .then((res) => (res.ok ? res.json() : null))
+    .then((data) => {
+      if (data?.version) {
+        el.textContent = `${data.name || "FitCoach AI"} v${data.version}${data.updated ? ` · ${data.updated}` : ""}`;
+      }
+    })
+    .catch(() => {});
 }
 
 function initResetBtn() {

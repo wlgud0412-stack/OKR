@@ -50,16 +50,25 @@ fitcoach/
 
 모든 사용자 데이터는 브라우저 `localStorage` (`fitcoach_state` 키)에 저장됩니다. 브라우저 데이터를 삭제하면 기록이 초기화됩니다.
 
-## GitHub
+## GitHub & 배포
 
-저장소: [wlgud0412-stack/OKR](https://github.com/wlgud0412-stack/OKR)
+- 저장소: [wlgud0412-stack/OKR](https://github.com/wlgud0412-stack/OKR)
+- Vercel: GitHub 연동 시 `main` push → 자동 배포
+
+### 업데이트 방법 (매번)
 
 ```powershell
 cd fitcoach
-.\publish-github.ps1
+.\update.ps1 "변경 내용 설명"
 ```
 
-Git 설치: [git-scm.com/download/win](https://git-scm.com/download/win)
+자세한 내용: [UPDATE.md](./UPDATE.md)
+
+### 최초 업로드
+
+```powershell
+.\publish-github.ps1
+```
 
 ## 라이선스
 
