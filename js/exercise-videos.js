@@ -77,3 +77,11 @@ function getExerciseVideoUrl(title) {
 
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(key + " 자세")}`;
 }
+
+function renderWorkoutVideoLink(videoUrl, { compact = false } = {}) {
+  const cls = compact ? "workout-video-link workout-video-link--compact" : "workout-video-link";
+  return `<a href="${videoUrl.replace(/"/g, "&quot;")}" target="_blank" rel="noopener noreferrer" class="${cls}" title="YouTube에서 동작 영상 보기">
+    <span class="workout-video-icon" aria-hidden="true">▶</span>
+    <span class="workout-video-label">관련영상</span>
+  </a>`;
+}

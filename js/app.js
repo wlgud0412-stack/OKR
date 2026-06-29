@@ -758,7 +758,7 @@ function renderWorkoutAddModalContent() {
               ${ex.tip ? `<span class="exercise-pick-tip">${escapeHtml(ex.tip)}</span>` : ""}
             </div>
             <div class="exercise-pick-actions">
-              <a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer" class="btn-icon workout-video-link" title="동작 영상">▶</a>
+              ${renderWorkoutVideoLink(videoUrl, { compact: true })}
               <button type="button" class="btn btn-primary btn-sm pick-exercise-btn" data-title="${escapeHtml(ex.title)}" data-meta="${escapeHtml(ex.meta)}" ${added ? "disabled" : ""}>
                 ${added ? "추가됨" : "추가"}
               </button>
@@ -952,10 +952,10 @@ function renderWorkoutListHtml(workouts, canEdit = true) {
         <div class="check-info">
           <div class="check-title">${escapeHtml(w.title)}</div>
           <div class="check-meta">${escapeHtml(w.meta)}</div>
+          ${renderWorkoutVideoLink(videoUrl)}
         </div>
       </label>
       <div class="workout-item-actions">
-        <a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer" class="btn-icon workout-video-link" title="YouTube 동작 영상">▶</a>
         ${canEdit ? `<button type="button" class="btn-icon edit-workout" data-id="${w.id}" title="수정">✏️</button>` : ""}
         ${canEdit ? `<button type="button" class="btn-icon delete-workout" data-id="${w.id}" title="삭제">🗑️</button>` : ""}
       </div>

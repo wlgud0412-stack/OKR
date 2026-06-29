@@ -543,7 +543,7 @@ body {
 
 .workout-item {
   position: relative;
-  padding-right: 96px !important;
+  padding-right: 56px !important;
 }
 
 .workout-item-actions {
@@ -556,15 +556,39 @@ body {
 }
 
 .workout-video-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 999px;
   text-decoration: none;
   color: #dc2626;
-  font-size: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  width: fit-content;
+}
+
+.workout-video-link--compact {
+  margin-top: 0;
+  padding: 5px 9px;
+  font-size: 10px;
+}
+
+.workout-video-icon {
+  font-size: 8px;
   line-height: 1;
 }
 
 .workout-video-link:hover {
   color: #b91c1c;
-  background: rgba(220, 38, 38, 0.08);
+  background: rgba(220, 38, 38, 0.14);
+  border-color: rgba(220, 38, 38, 0.35);
 }
 
 .workout-list-footer {
@@ -768,6 +792,7 @@ body.modal-open {
 .workout-memo-wrap {
   margin-top: 8px;
   padding-left: 32px;
+  padding-right: 8px;
 }
 
 .workout-memo {
