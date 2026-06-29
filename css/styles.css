@@ -2330,9 +2330,25 @@ body.modal-open {
   margin-top: 8px;
 }
 
+.routine-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
 .routine-picker-header h3 {
   font-size: 16px;
   margin-bottom: 6px;
+}
+
+.routine-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .routine-cards {

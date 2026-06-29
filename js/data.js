@@ -26,6 +26,7 @@ function createEmptyState() {
     weightHistory: [],
     mealLog: [],
     mealRecommendations: {},
+    workoutRecommendations: {},
     nutrition: {
       calories: { target: 0, current: 0 },
       protein: { target: 0, current: 0 },
@@ -72,6 +73,7 @@ function loadState() {
     if (!merged.stateVersion) merged.stateVersion = 1;
     if (!merged.mealLog) merged.mealLog = [];
     if (!merged.mealRecommendations) merged.mealRecommendations = {};
+    if (!merged.workoutRecommendations) merged.workoutRecommendations = {};
     if (!merged.nutrition) merged.nutrition = createEmptyState().nutrition;
     merged.weightHistory = (merged.weightHistory || []).map((r) => ({
       date: r.date,

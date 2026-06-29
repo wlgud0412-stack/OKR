@@ -1,6 +1,6 @@
 let state = loadState();
 
-const STATE_VERSION = 4;
+const STATE_VERSION = 5;
 
 function migrateStateIfNeeded() {
   const version = state.stateVersion || 0;
@@ -55,6 +55,10 @@ function migrateStateIfNeeded() {
         state.dailyWorkouts[dateStr] = state.dailyWorkouts[dateStr].map(normalizeWorkoutEntry);
       });
     }
+  }
+
+  if (version < 5) {
+    if (!state.workoutRecommendations) state.workoutRecommendations = {};
   }
 
   state.stateVersion = STATE_VERSION;
@@ -439,6 +443,12 @@ async function runAiGeneration() {
     today
   );
   applyMealRecommendation(state, state.mealRecommendations[today]);
+  state.workoutRecommendations = {};
+  state.workoutRecommendations[today] = generateWorkoutRoutineRecommendation(
+    state.profile,
+    state.goals,
+    today
+  );
   state.selectedDate = today;
   state.logHistory = [];
   state.weightHistory = [
@@ -1080,7 +1090,7 @@ function renderWorkoutListFooter(canEdit, workouts, dateStr) {
   });
 }
 
-function renderWorkoutRoutinePicker(dateStr) {
+function renderWorkoutRoutinePicker(dateStr, options = {}) {
   const picker = document.getElementById("workout-routine-picker");
   const list = document.getElementById("workout-list");
   if (!picker || !list) return;
@@ -1091,24 +1101,46 @@ function renderWorkoutRoutinePicker(dateStr) {
     return;
   }
 
-  const options = getWorkoutRoutineOptions(state.profile, state.goals);
+  if (!state.workoutRecommendations) state.workoutRecommendations = {};
+  if (!state.workoutRecommendations[dateStr] || options.forceNew) {
+    const previousRec = options.forceNew ? state.workoutRecommendations[dateStr] : null;
+    state.workoutRecommendations[dateStr] = generateWorkoutRoutineRecommendation(
+      state.profile,
+      state.goals,
+      dateStr,
+      options.forceNew ? { random: true, previousRec } : {}
+    );
+    saveState(state);
+  }
+
+  const rec = state.workoutRecommendations[dateStr];
+  const optionsList = rec?.routines || getWorkoutRoutineOptions(state.profile, state.goals);
+  const generatedLabel = rec?.generatedAt
+    ? new Date(rec.generatedAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+    : "";
+
   picker.classList.remove("hidden");
   list.innerHTML = "";
 
   picker.innerHTML = `
     <div class="routine-picker-header">
-      <h3>추천 운동 루틴 선택</h3>
-      <p class="empty-hint">마음에 드는 루틴을 선택하면 오늘의 운동 목록이 생성됩니다. (웨이트는 세트, 유산소는 km·분 기준)</p>
+      <div>
+        <h3>AI 추천 운동 루틴</h3>
+        <p class="empty-hint">${escapeHtml(rec?.source || "맞춤 AI 추천")}${generatedLabel ? ` · ${generatedLabel} 생성` : ""} · 마음에 드는 루틴을 선택하세요.</p>
+      </div>
+      <div class="routine-picker-actions">
+        <button type="button" class="btn btn-ghost btn-sm" id="regen-workout-routines">새 추천</button>
+      </div>
     </div>
     <div class="routine-cards">
-      ${options
+      ${optionsList
         .map(
           (r) => `
         <div class="routine-card">
           <div class="routine-card-top">
-            <span class="routine-tag">${r.tag}</span>
-            <h4>${r.name}</h4>
-            <p>${r.description}</p>
+            <span class="routine-tag">${escapeHtml(r.tag)}</span>
+            <h4>${escapeHtml(r.name)}</h4>
+            <p>${escapeHtml(r.description)}</p>
           </div>
           <ul class="routine-exercises">
             ${r.exercises
@@ -1117,7 +1149,7 @@ function renderWorkoutRoutinePicker(dateStr) {
               .join("")}
             ${r.exercises.length > 5 ? `<li class="routine-more">+${r.exercises.length - 5}개 더</li>` : ""}
           </ul>
-          <button type="button" class="btn btn-primary btn-full select-routine-btn" data-routine-id="${r.id}">
+          <button type="button" class="btn btn-primary btn-full select-routine-btn" data-routine-id="${escapeHtml(r.id)}">
             이 루틴 선택
           </button>
         </div>`
@@ -1125,9 +1157,22 @@ function renderWorkoutRoutinePicker(dateStr) {
         .join("")}
     </div>`;
 
+  picker.querySelector("#regen-workout-routines")?.addEventListener("click", () => {
+    const previousRec = state.workoutRecommendations[dateStr];
+    state.workoutRecommendations[dateStr] = generateWorkoutRoutineRecommendation(
+      state.profile,
+      state.goals,
+      dateStr,
+      { random: true, previousRec }
+    );
+    saveState(state);
+    renderWorkoutRoutinePicker(dateStr);
+    showToast("새로운 운동 루틴 3가지를 추천했습니다");
+  });
+
   picker.querySelectorAll(".select-routine-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const routine = options.find((r) => r.id === btn.dataset.routineId);
+      const routine = optionsList.find((r) => r.id === btn.dataset.routineId);
       if (!routine) return;
       applyWorkoutRoutine(state, routine, dateStr);
       saveState(state);
@@ -1374,8 +1419,18 @@ function renderToday() {
 
       document.getElementById("change-routine-btn")?.addEventListener("click", () => {
         if (!confirm("현재 운동 목록을 지우고 루틴을 다시 선택할까요?")) return;
+        const previousRec = state.workoutRecommendations?.[dateStr];
         delete state.dailyWorkouts[dateStr];
         state.workoutTemplate = [];
+        state.selectedRoutineId = null;
+        state.selectedRoutineName = null;
+        if (!state.workoutRecommendations) state.workoutRecommendations = {};
+        state.workoutRecommendations[dateStr] = generateWorkoutRoutineRecommendation(
+          state.profile,
+          state.goals,
+          dateStr,
+          { random: true, previousRec }
+        );
         saveState(state);
         renderAll();
       });
