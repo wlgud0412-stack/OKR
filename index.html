@@ -33,40 +33,40 @@
         <p class="setup-desc">맞춤 운동 계획을 위해 정보를 입력해주세요.</p>
         <form class="form setup-form" id="onboarding-form">
           <div class="form-grid">
-            <label>
-              이름
+            <label class="form-field">
+              <span class="field-label"><span>이름</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="text" name="name" required placeholder="홍길동" />
             </label>
-            <label>
-              나이
+            <label class="form-field">
+              <span class="field-label"><span>나이</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="number" name="age" min="14" max="100" required placeholder="28" />
             </label>
-            <label>
-              성별
+            <label class="form-field">
+              <span class="field-label"><span>성별</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <select name="gender" required>
                 <option value="">선택</option>
                 <option value="남성">남성</option>
                 <option value="여성">여성</option>
               </select>
             </label>
-            <label>
-              키 (cm)
+            <label class="form-field">
+              <span class="field-label"><span>키 (cm)</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="number" name="height" min="100" max="250" required placeholder="175" />
             </label>
-            <label>
-              몸무게 (kg)
+            <label class="form-field">
+              <span class="field-label"><span>몸무게 (kg)</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="number" name="weight" step="0.1" min="30" max="300" required placeholder="75" />
             </label>
-            <label>
-              체지방률 (%) <span class="optional">선택</span>
+            <label class="form-field">
+              <span class="field-label"><span>체지방률 (%)</span><span class="optional">선택</span></span>
               <input type="number" name="bodyFat" step="0.1" min="3" max="60" placeholder="25" />
             </label>
-            <label>
-              골격근량 (kg) <span class="optional">인바디 등</span>
+            <label class="form-field">
+              <span class="field-label"><span>골격근량 (kg)</span><span class="optional">인바디 등</span></span>
               <input type="number" name="skeletalMuscle" step="0.1" min="10" max="80" placeholder="30" />
             </label>
-            <label>
-              운동 경력
+            <label class="form-field">
+              <span class="field-label"><span>운동 경력</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <select name="experience" required>
                 <option value="">선택</option>
                 <option value="초급">초급</option>
@@ -74,8 +74,8 @@
                 <option value="고급">고급</option>
               </select>
             </label>
-            <label>
-              운동 목적
+            <label class="form-field full-width">
+              <span class="field-label"><span>운동 목적</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <select name="purpose" required>
                 <option value="">선택</option>
                 <option value="다이어트">다이어트</option>
@@ -84,20 +84,20 @@
                 <option value="유지">유지</option>
               </select>
             </label>
-            <label class="full-width">
-              운동 가능 요일
-              <div class="day-checkboxes" id="day-checkboxes">
-                <label class="day-check"><input type="checkbox" name="days" value="월" /> 월</label>
-                <label class="day-check"><input type="checkbox" name="days" value="화" /> 화</label>
-                <label class="day-check"><input type="checkbox" name="days" value="수" /> 수</label>
-                <label class="day-check"><input type="checkbox" name="days" value="목" /> 목</label>
-                <label class="day-check"><input type="checkbox" name="days" value="금" /> 금</label>
-                <label class="day-check"><input type="checkbox" name="days" value="토" /> 토</label>
-                <label class="day-check"><input type="checkbox" name="days" value="일" /> 일</label>
+            <div class="form-field full-width">
+              <span class="field-label"><span>운동 가능 요일</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
+              <div class="day-checkboxes" id="day-checkboxes" role="group" aria-label="운동 가능 요일">
+                <label class="day-check"><input type="checkbox" name="days" value="월" /><span>월</span></label>
+                <label class="day-check"><input type="checkbox" name="days" value="화" /><span>화</span></label>
+                <label class="day-check"><input type="checkbox" name="days" value="수" /><span>수</span></label>
+                <label class="day-check"><input type="checkbox" name="days" value="목" /><span>목</span></label>
+                <label class="day-check"><input type="checkbox" name="days" value="금" /><span>금</span></label>
+                <label class="day-check"><input type="checkbox" name="days" value="토" /><span>토</span></label>
+                <label class="day-check"><input type="checkbox" name="days" value="일" /><span>일</span></label>
               </div>
-            </label>
-            <label>
-              하루 운동 가능 시간
+            </div>
+            <label class="form-field">
+              <span class="field-label"><span>하루 운동 가능 시간</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <select name="availableTime" required>
                 <option value="">선택</option>
                 <option value="30분">30분</option>
@@ -106,8 +106,8 @@
                 <option value="2시간">2시간</option>
               </select>
             </label>
-            <label>
-              헬스장 이용 여부
+            <label class="form-field">
+              <span class="field-label"><span>헬스장 이용 여부</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <select name="gym" required>
                 <option value="">선택</option>
                 <option value="true">이용함</option>
@@ -125,36 +125,36 @@
         <p class="setup-desc">달성하고 싶은 목표를 설정해주세요. AI가 OKR 기반 계획을 생성합니다.</p>
         <form class="form setup-form" id="goals-form">
           <div class="form-grid">
-            <label>
-              목표 체중 (kg)
+            <label class="form-field">
+              <span class="field-label"><span>목표 체중 (kg)</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="number" name="targetWeight" step="0.1" min="30" max="300" required />
             </label>
-            <label>
-              목표 체지방률 (%) <span class="optional">선택</span>
+            <label class="form-field">
+              <span class="field-label"><span>목표 체지방률 (%)</span><span class="optional">선택</span></span>
               <input type="number" name="targetBodyFat" step="0.1" min="3" max="60" placeholder="18" />
             </label>
-            <label>
-              목표 골격근량 (kg) <span class="optional">선택</span>
+            <label class="form-field">
+              <span class="field-label"><span>목표 골격근량 (kg)</span><span class="optional">선택</span></span>
               <input type="number" name="targetSkeletalMuscle" step="0.1" min="10" max="80" placeholder="32" />
             </label>
-            <label>
-              목표 달성 기간 (개월)
+            <label class="form-field">
+              <span class="field-label"><span>목표 달성 기간 (개월)</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="number" name="periodMonths" min="1" max="24" value="6" required />
             </label>
-            <label>
-              운동 목표
+            <label class="form-field full-width">
+              <span class="field-label"><span>운동 목표</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="text" name="workoutGoal" placeholder="예: 운동 습관 형성, 마라톤 완주" required />
             </label>
-            <label>
-              주간 운동 횟수
+            <label class="form-field">
+              <span class="field-label"><span>주간 운동 횟수</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="number" name="weeklyWorkouts" min="1" max="7" value="5" required />
             </label>
-            <label>
-              주간 러닝 거리 (km)
+            <label class="form-field">
+              <span class="field-label"><span>주간 러닝 거리 (km)</span><span class="optional optional--spacer" aria-hidden="true">선택</span></span>
               <input type="number" name="weeklyRunningKm" min="0" max="200" step="0.5" value="20" required />
             </label>
-            <label class="full-width">
-              기타 개인 목표 <span class="optional">선택</span>
+            <label class="form-field full-width">
+              <span class="field-label"><span>기타 개인 목표</span><span class="optional">선택</span></span>
               <input type="text" name="customGoal" placeholder="예: 5km 25분 이내 달리기" />
             </label>
           </div>

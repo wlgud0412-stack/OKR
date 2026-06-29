@@ -221,11 +221,11 @@ body {
 }
 
 .date-picker-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 32px 1fr 32px 32px;
   align-items: center;
   margin-bottom: 12px;
-  gap: 8px;
+  gap: 6px;
 }
 
 .cal-nav-btn {
@@ -238,6 +238,7 @@ body {
   cursor: pointer;
   font-size: 12px;
   flex-shrink: 0;
+  padding: 0;
 }
 
 .cal-nav-btn:hover {
@@ -246,14 +247,23 @@ body {
 }
 
 #cal-month-label {
-  flex: 1;
+  min-width: 0;
   text-align: center;
   font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.date-picker-header .btn-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
 }
 
 .calendar-weekdays {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
   margin-bottom: 8px;
   text-align: center;
@@ -261,15 +271,21 @@ body {
   color: var(--text-muted);
 }
 
+.calendar-weekdays span {
+  min-width: 0;
+}
+
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
   margin-bottom: 12px;
 }
 
 .cal-day {
   aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
   border: 1px solid transparent;
   background: var(--bg-elevated);
   color: var(--text);
@@ -278,7 +294,13 @@ body {
   cursor: pointer;
   font-family: inherit;
   padding: 0;
-  transition: all 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .cal-day:hover:not(:disabled) {
@@ -306,12 +328,15 @@ body {
 
 .cal-day.cal-has-record:not(.cal-selected)::after {
   content: "";
-  display: block;
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 4px;
   height: 4px;
   background: var(--accent);
   border-radius: 50%;
-  margin: 2px auto 0;
+  margin: 0;
 }
 
 .metrics-table-wrap {
@@ -1669,6 +1694,26 @@ body.modal-open {
 
   .form-grid {
     grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .day-checkboxes {
+    gap: 4px;
+  }
+
+  .day-check {
+    padding: 9px 2px;
+    font-size: 13px !important;
+  }
+
+  .date-picker-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: min(360px, calc(100vw - 32px));
+    min-width: 0;
   }
 }
 
@@ -1769,8 +1814,8 @@ body.modal-open {
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 16px;
   margin-bottom: 24px;
 }
 
@@ -1778,42 +1823,87 @@ body.modal-open {
   grid-column: 1 / -1;
 }
 
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.field-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.form-grid .form-field input,
+.form-grid .form-field select,
+.setup-form .form-grid > label input,
+.setup-form .form-grid > label select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .optional {
   font-weight: 400;
   color: var(--text-muted);
   font-size: 11px;
+  flex-shrink: 0;
+}
+
+.optional--spacer {
+  visibility: hidden;
 }
 
 .day-checkboxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 4px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .day-check {
+  position: relative;
   display: flex !important;
-  flex-direction: row !important;
+  flex-direction: column !important;
   align-items: center;
-  gap: 6px !important;
+  justify-content: center;
+  gap: 0 !important;
+  min-width: 0;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 14px;
+  padding: 10px 4px;
   cursor: pointer;
   font-size: 14px !important;
+  font-weight: 600;
   color: var(--text) !important;
-  transition: all 0.2s;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+  user-select: none;
+}
+
+.day-check span {
+  pointer-events: none;
 }
 
 .day-check:has(input:checked) {
   border-color: var(--accent);
   background: var(--accent-glow);
   color: var(--accent) !important;
+  box-shadow: 0 0 0 1px rgba(13, 148, 136, 0.15);
 }
 
 .day-check input {
-  accent-color: var(--accent);
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
 }
 
 .btn-full {
@@ -2564,9 +2654,13 @@ body.modal-open {
   }
 
   .date-picker-popup {
-    right: 16px;
-    left: 16px;
-    min-width: auto;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+    width: min(360px, calc(100vw - 32px));
+    min-width: 0;
   }
 
   .dash-stats-row {
