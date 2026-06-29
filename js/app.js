@@ -68,6 +68,7 @@ function showMainApp() {
   initResetBtn();
   initAppVersion();
   initWorkoutAddModal();
+  initMealAddModal();
 }
 
 function showSetupPage(page) {
@@ -674,7 +675,10 @@ function initWorkoutAddModal() {
   });
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && workoutAddContext) closeWorkoutAddPicker();
+    if (e.key === "Escape") {
+      if (workoutAddContext) closeWorkoutAddPicker();
+      if (mealAddContext) closeMealAddPicker();
+    }
   });
 }
 
@@ -1029,7 +1033,10 @@ function renderMealRecommendationPanel(dateStr) {
             <p class="meal-rec-name">${escapeHtml(meal.name)}</p>
             <p class="meal-rec-items">${escapeHtml(meal.itemsText)}</p>
             <p class="meal-rec-macros">P ${meal.nutrition.protein}g · C ${meal.nutrition.carbs}g · F ${meal.nutrition.fat}g</p>
-            <button type="button" class="btn btn-ghost btn-sm btn-full apply-meal-btn" data-meal-type="${type}">${MEAL_LABELS[type]} 적용</button>
+            <div class="meal-rec-card-actions">
+              ${renderMealVideoLink(meal.videoUrl || getMealVideoUrl(meal.name))}
+              <button type="button" class="btn btn-ghost btn-sm apply-meal-btn" data-meal-type="${type}">${MEAL_LABELS[type]} 적용</button>
+            </div>
           </div>`;
         })
         .join("")}
@@ -1185,6 +1192,7 @@ function sumMealNutrition(items) {
 }
 
 function renderMealItemHtml(m, canEdit) {
+  const videoUrl = m.videoUrl || getMealVideoUrl(m.name.split(" (")[0]);
   return `
     <div class="meal-item" data-id="${m.id}">
       <div class="meal-item-info">
@@ -1192,6 +1200,7 @@ function renderMealItemHtml(m, canEdit) {
         <span class="meal-nutrition">
           ${m.nutrition.calories} kcal · P ${m.nutrition.protein}g
         </span>
+        ${renderMealVideoLink(videoUrl)}
         ${m.confidence === "estimate" ? '<span class="meal-estimate">AI 추정</span>' : ""}
       </div>
       ${
@@ -1239,6 +1248,8 @@ function renderMealSections(dateStr) {
     form.querySelectorAll("input, select, button").forEach((el) => {
       el.disabled = !canEdit;
     });
+    const pickerBtn = document.getElementById("open-meal-picker-btn");
+    if (pickerBtn) pickerBtn.style.display = canEdit ? "" : "none";
   }
 
   const meals = getMealsForDate(state, dateStr);
@@ -1304,10 +1315,194 @@ function renderMealSections(dateStr) {
   }
 }
 
+let mealAddContext = null;
+
+function initMealAddModal() {
+  const modal = document.getElementById("meal-add-modal");
+  if (!modal || modal.dataset.bound) return;
+  modal.dataset.bound = "true";
+
+  document.getElementById("meal-add-close")?.addEventListener("click", closeMealAddPicker);
+  document.getElementById("meal-add-backdrop")?.addEventListener("click", closeMealAddPicker);
+  document.getElementById("meal-add-back")?.addEventListener("click", () => {
+    if (!mealAddContext) return;
+    if (mealAddContext.step === "meals") {
+      mealAddContext.step = "purpose";
+      renderMealAddModalContent();
+    } else if (mealAddContext.step === "purpose") {
+      mealAddContext.step = "cuisine";
+      mealAddContext.cuisineId = null;
+      renderMealAddModalContent();
+    }
+  });
+}
+
+function openMealAddPicker(dateStr) {
+  const form = document.getElementById("meal-add-form");
+  const selectedMealType = form?.querySelector('[name="mealType"]')?.value || "lunch";
+
+  mealAddContext = {
+    dateStr,
+    step: "cuisine",
+    cuisineId: null,
+    purposeId: getDefaultPurposeId(state.profile),
+    highlightMealType: selectedMealType,
+  };
+  initMealAddModal();
+  document.getElementById("meal-add-modal")?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  renderMealAddModalContent();
+}
+
+function closeMealAddPicker() {
+  mealAddContext = null;
+  document.getElementById("meal-add-modal")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+function renderMealAddModalContent() {
+  if (!mealAddContext) return;
+
+  const titleEl = document.getElementById("meal-add-title");
+  const subtitleEl = document.getElementById("meal-add-subtitle");
+  const backBtn = document.getElementById("meal-add-back");
+  const bodyEl = document.getElementById("meal-add-body");
+  if (!titleEl || !subtitleEl || !backBtn || !bodyEl) return;
+
+  const { dateStr, step } = mealAddContext;
+  const existingMeals = getMealsForDate(state, dateStr);
+  const existingNames = new Set(existingMeals.map((m) => m.name.split(" (")[0]));
+
+  if (step === "cuisine") {
+    titleEl.textContent = "요리 종류 선택";
+    subtitleEl.textContent = "한식 · 중식 · 양식 · 일식 중 선택하세요";
+    backBtn.classList.add("hidden");
+
+    bodyEl.innerHTML = `
+      <div class="body-part-grid meal-cuisine-grid">
+        ${MEAL_CUISINE_TYPES.map(
+          (c) => `
+          <button type="button" class="body-part-btn meal-cuisine-btn" data-cuisine-id="${c.id}">
+            <span class="body-part-icon">${c.icon}</span>
+            <span class="body-part-label">${c.label}</span>
+          </button>`
+        ).join("")}
+      </div>`;
+
+    bodyEl.querySelectorAll(".meal-cuisine-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        mealAddContext.cuisineId = btn.dataset.cuisineId;
+        mealAddContext.step = "purpose";
+        renderMealAddModalContent();
+      });
+    });
+    return;
+  }
+
+  if (step === "purpose") {
+    const cuisineLabel = getCuisineLabel(mealAddContext.cuisineId);
+    titleEl.textContent = `${cuisineLabel} · 목표 선택`;
+    subtitleEl.textContent = "다이어트 · 근비대 · 균형 중 선택하세요";
+    backBtn.classList.remove("hidden");
+    backBtn.textContent = "← 요리 종류";
+
+    const defaultPurpose = getDefaultPurposeId(state.profile);
+
+    bodyEl.innerHTML = `
+      <div class="meal-purpose-grid">
+        ${MEAL_PURPOSE_TYPES.map(
+          (p) => `
+          <button type="button" class="meal-purpose-btn ${p.id === defaultPurpose ? "recommended" : ""}" data-purpose-id="${p.id}">
+            <strong>${p.label}</strong>
+            <span>${p.desc}</span>
+            ${p.id === defaultPurpose ? '<em class="meal-purpose-badge">내 목표</em>' : ""}
+          </button>`
+        ).join("")}
+      </div>`;
+
+    bodyEl.querySelectorAll(".meal-purpose-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        mealAddContext.purposeId = btn.dataset.purposeId;
+        mealAddContext.step = "meals";
+        renderMealAddModalContent();
+      });
+    });
+    return;
+  }
+
+  const cuisineLabel = getCuisineLabel(mealAddContext.cuisineId);
+  const purposeLabel = MEAL_PURPOSE_TYPES.find((p) => p.id === mealAddContext.purposeId)?.label || "";
+  titleEl.textContent = `${cuisineLabel} ${purposeLabel} 추천 식단`;
+  subtitleEl.textContent = "원하는 메뉴를 선택하면 해당 끼니에 추가됩니다";
+  backBtn.classList.remove("hidden");
+  backBtn.textContent = "← 목표 선택";
+
+  const grouped = getMealsByCuisineAndPurpose(mealAddContext.cuisineId, mealAddContext.purposeId);
+
+  bodyEl.innerHTML = ["breakfast", "lunch", "dinner"]
+    .map((type) => {
+      const items = grouped[type];
+      if (!items.length) return "";
+      const highlight = mealAddContext.highlightMealType === type ? " meal-pick-section--highlight" : "";
+      return `
+        <div class="meal-pick-section${highlight}">
+          <h4 class="meal-pick-section-title">${MEAL_LABELS[type]}</h4>
+          <ul class="exercise-pick-list">
+            ${items
+              .map((menu) => {
+                const added = existingNames.has(menu.name);
+                const itemsText = menu.items.join(" · ");
+                return `
+                <li class="exercise-pick-item ${added ? "added" : ""}">
+                  <div class="exercise-pick-info">
+                    <strong>${escapeHtml(menu.name)}</strong>
+                    <span class="exercise-pick-meta">${menu.nutrition.calories} kcal · P ${menu.nutrition.protein}g</span>
+                    <span class="exercise-pick-tip">${escapeHtml(itemsText)}</span>
+                  </div>
+                  <div class="exercise-pick-actions">
+                    ${renderMealVideoLink(menu.videoUrl)}
+                    <button type="button" class="btn btn-primary btn-sm pick-meal-btn" data-meal-type="${type}" data-meal-name="${escapeHtml(menu.name)}" ${added ? "disabled" : ""}>
+                      ${added ? "추가됨" : "추가"}
+                    </button>
+                  </div>
+                </li>`;
+              })
+              .join("")}
+          </ul>
+        </div>`;
+    })
+    .join("");
+
+  bodyEl.querySelectorAll(".pick-meal-btn:not([disabled])").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const menu = grouped[btn.dataset.mealType]?.find((m) => m.name === btn.dataset.mealName);
+      if (!menu) return;
+      applyCatalogMeal(state, dateStr, btn.dataset.mealType, {
+        ...menu,
+        itemsText: menu.items.join(" · "),
+      });
+      saveState(state);
+      existingNames.add(menu.name);
+      renderAll();
+      renderMealAddModalContent();
+      showToast(`「${menu.name}」이 ${MEAL_LABELS[btn.dataset.mealType]}에 추가되었습니다`);
+    });
+  });
+}
+
 function initMealForm() {
   const form = document.getElementById("meal-add-form");
   if (!form || form.dataset.bound) return;
   form.dataset.bound = "true";
+
+  document.getElementById("open-meal-picker-btn")?.addEventListener("click", () => {
+    const dateStr = getSelectedDate(state);
+    if (dateStr > todayDateStr()) {
+      showToast("미래 날짜에는 식단을 추가할 수 없습니다");
+      return;
+    }
+    openMealAddPicker(dateStr);
+  });
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();

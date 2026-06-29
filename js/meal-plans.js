@@ -247,9 +247,14 @@ function generateMealPlanRecommendation(state, dateStr, options = {}) {
     fat: nutrition.fat.target,
   };
 
-  const purposeKey =
-    profile?.purpose === "다이어트" ? "diet" : profile?.purpose === "근비대" ? "bulk" : "default";
-  const library = MEAL_MENU_LIBRARY[purposeKey] || MEAL_MENU_LIBRARY.default;
+  const purposeKey = options.purposeId || getPurposeKeyFromProfile(profile);
+  const cuisines = MEAL_CUISINE_TYPES.map((c) => c.id);
+  const cuisineId =
+    options.cuisineId ||
+    (options.random ? cuisines[Math.floor(Math.random() * cuisines.length)] : "korean");
+  const cuisineLabel = getCuisineLabel(cuisineId);
+  const purposeLabel =
+    MEAL_PURPOSE_TYPES.find((p) => p.id === purposeKey)?.label || "균형";
   const budgets = getMealBudgets(targets);
 
   const previousMeals = options.previousRec?.meals;
@@ -258,24 +263,22 @@ function generateMealPlanRecommendation(state, dateStr, options = {}) {
   const meals = {};
   ["breakfast", "lunch", "dinner"].forEach((type) => {
     const excludeNames = random && previousMeals?.[type] ? [previousMeals[type].name] : [];
-    const menu = pickMenuForMeal(
-      library[type] || MEAL_MENU_LIBRARY.default[type],
-      budgets[type],
-      { random, excludeNames }
-    );
+    const menu = pickMenuFromCatalog(cuisineId, purposeKey, type, budgets[type], {
+      random,
+      excludeNames,
+    });
     if (menu) {
       meals[type] = {
         ...menu,
         mealType: type,
         itemsText: menu.items.join(" · "),
+        videoUrl: menu.videoUrl,
       };
     }
   });
 
   const totals = roundNutrition(
-    sumNutrition(
-      Object.values(meals).map((m) => ({ nutrition: m.nutrition }))
-    )
+    sumNutrition(Object.values(meals).map((m) => ({ nutrition: m.nutrition })))
   );
 
   const withinTargets =
@@ -290,7 +293,9 @@ function generateMealPlanRecommendation(state, dateStr, options = {}) {
     totals,
     targets,
     withinTargets,
-    source: "헬스·다이어트 식단 가이드 기반 AI 추천",
+    cuisineId,
+    purposeId: purposeKey,
+    source: `${cuisineLabel} · ${purposeLabel} 맞춤 AI 추천`,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -317,6 +322,7 @@ function applyMealRecommendation(state, recommendation, mealTypes) {
       matched: "meal-plan",
       date: dateStr,
       recommended: true,
+      videoUrl: meal.videoUrl || getMealVideoUrl(meal.name),
     });
     added++;
   });

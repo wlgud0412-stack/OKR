@@ -2318,6 +2318,96 @@ body.modal-open {
   margin-bottom: 10px;
 }
 
+.meal-rec-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meal-item-info .workout-video-link {
+  margin-top: 6px;
+}
+
+.meal-add-dialog {
+  width: min(560px, 100%);
+}
+
+.meal-cuisine-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.meal-purpose-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meal-purpose-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.meal-purpose-btn strong {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.meal-purpose-btn span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.meal-purpose-btn.recommended {
+  border-color: var(--accent);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.meal-purpose-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--accent-dim);
+  background: var(--accent-glow);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.meal-pick-section {
+  margin-bottom: 16px;
+}
+
+.meal-pick-section--highlight .meal-pick-section-title {
+  color: var(--accent-dim);
+}
+
+.meal-pick-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.meal-add-form #open-meal-picker-btn {
+  white-space: nowrap;
+}
+
 .btn-icon:hover {
   opacity: 1;
   background: var(--bg-card);
@@ -2337,6 +2427,10 @@ body.modal-open {
   .meal-add-form input {
     width: 100%;
     min-width: 0;
+  }
+
+  .meal-cuisine-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .meal-grid {

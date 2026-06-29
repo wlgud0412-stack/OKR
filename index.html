@@ -281,6 +281,7 @@
               <option value="dinner">저녁</option>
             </select>
             <input type="text" name="foodName" placeholder="예: 삶은 계란 2개, 바나나 1개" required />
+            <button type="button" class="btn btn-ghost btn-sm" id="open-meal-picker-btn">식단 추천</button>
             <button type="submit" class="btn btn-primary">추가</button>
           </form>
           <div class="meal-sections-grid" id="meal-sections"></div>
@@ -491,9 +492,25 @@
     </div>
   </div>
 
+  <div class="workout-add-modal hidden" id="meal-add-modal" role="dialog" aria-modal="true" aria-labelledby="meal-add-title">
+    <div class="workout-add-backdrop" id="meal-add-backdrop"></div>
+    <div class="workout-add-dialog meal-add-dialog">
+      <div class="workout-add-header">
+        <button type="button" class="workout-add-back hidden" id="meal-add-back">← 이전</button>
+        <h3 id="meal-add-title">요리 종류 선택</h3>
+        <button type="button" class="workout-add-close" id="meal-add-close" aria-label="닫기">✕</button>
+      </div>
+      <p class="empty-hint workout-add-subtitle" id="meal-add-subtitle">한식 · 중식 · 양식 · 일식 중 선택하세요</p>
+      <div class="workout-add-body" id="meal-add-body"></div>
+    </div>
+  </div>
+
   <script src="js/data.js"></script>
   <script src="js/nutrition.js"></script>
+  <script src="js/exercise-videos.js"></script>
+  <script src="js/meal-videos.js"></script>
   <script src="js/meal-plans.js"></script>
+  <script src="js/meal-catalog.js"></script>
   <script src="js/workout-routines.js"></script>
   <script src="js/exercise-videos.js"></script>
   <script src="js/exercise-catalog.js"></script>
