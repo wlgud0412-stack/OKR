@@ -67,6 +67,7 @@ function showMainApp() {
   initCoachBtn();
   initResetBtn();
   initAppVersion();
+  initWorkoutAddModal();
 }
 
 function showSetupPage(page) {
@@ -656,25 +657,150 @@ function syncWorkoutTemplateFromDaily(workouts) {
   state.workoutTemplate = workouts.map((w) => ({ title: w.title, meta: w.meta }));
 }
 
-function promptAddWorkout(workouts, dateStr) {
-  const title = prompt("추가할 운동명:");
-  if (title === null || !title.trim()) return;
-  const meta = prompt("세트/횟수 (예: 4세트 × 10회):", "4세트 × 10회");
-  if (meta === null) return;
+let workoutAddContext = null;
+
+function initWorkoutAddModal() {
+  const modal = document.getElementById("workout-add-modal");
+  if (!modal || modal.dataset.bound) return;
+  modal.dataset.bound = "true";
+
+  document.getElementById("workout-add-close")?.addEventListener("click", closeWorkoutAddPicker);
+  document.getElementById("workout-add-backdrop")?.addEventListener("click", closeWorkoutAddPicker);
+  document.getElementById("workout-add-back")?.addEventListener("click", () => {
+    if (!workoutAddContext) return;
+    workoutAddContext.step = "parts";
+    workoutAddContext.partId = null;
+    renderWorkoutAddModalContent();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && workoutAddContext) closeWorkoutAddPicker();
+  });
+}
+
+function openWorkoutAddPicker(workouts, dateStr) {
+  workoutAddContext = { workouts, dateStr, step: "parts", partId: null };
+  initWorkoutAddModal();
+  document.getElementById("workout-add-modal")?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  renderWorkoutAddModalContent();
+}
+
+function closeWorkoutAddPicker() {
+  workoutAddContext = null;
+  document.getElementById("workout-add-modal")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+function renderWorkoutAddModalContent() {
+  if (!workoutAddContext) return;
+
+  const titleEl = document.getElementById("workout-add-title");
+  const subtitleEl = document.getElementById("workout-add-subtitle");
+  const backBtn = document.getElementById("workout-add-back");
+  const bodyEl = document.getElementById("workout-add-body");
+  if (!titleEl || !subtitleEl || !backBtn || !bodyEl) return;
+
+  const hasGym = Boolean(state.profile?.gym);
+  const existingTitles = new Set(workoutAddContext.workouts.map((w) => w.title));
+
+  if (workoutAddContext.step === "parts") {
+    titleEl.textContent = "운동 부위 선택";
+    subtitleEl.textContent = "추가할 부위를 선택하세요";
+    backBtn.classList.add("hidden");
+
+    bodyEl.innerHTML = `
+      <div class="body-part-grid">
+        ${EXERCISE_BODY_PARTS.map(
+          (part) => `
+          <button type="button" class="body-part-btn" data-part-id="${part.id}">
+            <span class="body-part-icon">${part.icon}</span>
+            <span class="body-part-label">${part.label}</span>
+          </button>`
+        ).join("")}
+      </div>`;
+
+    bodyEl.querySelectorAll(".body-part-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        workoutAddContext.step = "exercises";
+        workoutAddContext.partId = btn.dataset.partId;
+        renderWorkoutAddModalContent();
+      });
+    });
+    return;
+  }
+
+  const partLabel = getBodyPartLabel(workoutAddContext.partId);
+  const exercises = getExercisesForBodyPart(workoutAddContext.partId, hasGym);
+
+  titleEl.textContent = `${partLabel} 추천 운동`;
+  subtitleEl.textContent = hasGym
+    ? "헬스장 기준 추천 · 원하는 운동을 선택하세요"
+    : "맨몸/홈트 기준 추천 · 원하는 운동을 선택하세요";
+  backBtn.classList.remove("hidden");
+
+  if (exercises.length === 0) {
+    bodyEl.innerHTML = `<p class="empty-state">추천 운동이 없습니다.</p>`;
+    return;
+  }
+
+  bodyEl.innerHTML = `
+    <ul class="exercise-pick-list">
+      ${exercises
+        .map((ex) => {
+          const added = existingTitles.has(ex.title);
+          const videoUrl = getExerciseVideoUrl(ex.title);
+          return `
+          <li class="exercise-pick-item ${added ? "added" : ""}">
+            <div class="exercise-pick-info">
+              <strong>${escapeHtml(ex.title)}</strong>
+              <span class="exercise-pick-meta">${escapeHtml(ex.meta)}</span>
+              ${ex.tip ? `<span class="exercise-pick-tip">${escapeHtml(ex.tip)}</span>` : ""}
+            </div>
+            <div class="exercise-pick-actions">
+              <a href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer" class="btn-icon workout-video-link" title="동작 영상">▶</a>
+              <button type="button" class="btn btn-primary btn-sm pick-exercise-btn" data-title="${escapeHtml(ex.title)}" data-meta="${escapeHtml(ex.meta)}" ${added ? "disabled" : ""}>
+                ${added ? "추가됨" : "추가"}
+              </button>
+            </div>
+          </li>`;
+        })
+        .join("")}
+    </ul>`;
+
+  bodyEl.querySelectorAll(".pick-exercise-btn:not([disabled])").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      addWorkoutFromCatalog(btn.dataset.title, btn.dataset.meta);
+    });
+  });
+}
+
+function addWorkoutFromCatalog(title, meta) {
+  if (!workoutAddContext) return;
+
+  const { dateStr } = workoutAddContext;
+  if (workoutAddContext.workouts.some((w) => w.title === title)) {
+    showToast("이미 추가된 운동입니다");
+    renderWorkoutAddModalContent();
+    return;
+  }
 
   const newWorkout = {
     id: Date.now(),
-    title: title.trim(),
-    meta: meta.trim() || "4세트 × 10회",
+    title,
+    meta,
     done: false,
     memo: "",
   };
-  const updated = [...workouts, newWorkout];
+  const updated = [...workoutAddContext.workouts, newWorkout];
   setWorkoutsForDate(state, dateStr, updated);
   syncWorkoutTemplateFromDaily(updated);
   saveState(state);
+
+  workoutAddContext.workouts = updated;
   renderAll();
-  showToast(`「${newWorkout.title}」 운동이 추가되었습니다`);
+  renderWorkoutAddModalContent();
+  showToast(`「${title}」 운동이 추가되었습니다`);
 }
 
 function deleteWorkoutItem(workouts, id, dateStr) {
@@ -706,7 +832,7 @@ function renderWorkoutListFooter(canEdit, workouts, dateStr) {
   `;
 
   footer.querySelector("#add-workout-btn")?.addEventListener("click", () => {
-    promptAddWorkout(workouts, dateStr);
+    openWorkoutAddPicker(workouts, dateStr);
   });
 }
 

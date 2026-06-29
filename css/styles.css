@@ -577,6 +577,194 @@ body {
   display: none;
 }
 
+/* Workout add modal */
+body.modal-open {
+  overflow: hidden;
+}
+
+.workout-add-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.workout-add-modal.hidden {
+  display: none;
+}
+
+.workout-add-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.workout-add-dialog {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: min(85vh, 720px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workout-add-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 16px 8px;
+}
+
+.workout-add-header h3 {
+  flex: 1;
+  font-size: 17px;
+  margin: 0;
+}
+
+.workout-add-back,
+.workout-add-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.workout-add-back.hidden {
+  display: none;
+}
+
+.workout-add-back:hover,
+.workout-add-close:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.workout-add-subtitle {
+  padding: 0 16px 12px;
+  margin: 0;
+}
+
+.workout-add-body {
+  padding: 0 16px 16px;
+  overflow-y: auto;
+}
+
+.body-part-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.body-part-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.body-part-btn:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.body-part-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.body-part-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.exercise-pick-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exercise-pick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+}
+
+.exercise-pick-item.added {
+  opacity: 0.65;
+}
+
+.exercise-pick-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.exercise-pick-info strong {
+  font-size: 14px;
+}
+
+.exercise-pick-meta {
+  font-size: 12px;
+  color: var(--info);
+  font-weight: 600;
+}
+
+.exercise-pick-tip {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.exercise-pick-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.exercise-pick-actions .pick-exercise-btn {
+  min-width: 64px;
+}
+
+.exercise-pick-actions .pick-exercise-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+@media (max-width: 520px) {
+  .body-part-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .workout-memo-wrap {
   margin-top: 8px;
   padding-left: 32px;
