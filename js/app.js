@@ -90,6 +90,166 @@ function showMainApp() {
   initAppVersion();
   initWorkoutAddModal();
   initMealAddModal();
+  initGoalTargetsForm();
+}
+
+function initGoalTargetsForm() {
+  const form = document.getElementById("goal-targets-form");
+  if (!form || form.dataset.bound) return;
+  form.dataset.bound = "true";
+
+  form.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("input", () => applyGoalTargetChanges());
+    input.addEventListener("change", () => applyGoalTargetChanges());
+  });
+}
+
+function applyGoalTargetChanges() {
+  if (!state.goals) return;
+  const form = document.getElementById("goal-targets-form");
+  if (!form) return;
+
+  const weightRaw = form.targetWeight.value;
+  if (weightRaw === "" || Number.isNaN(Number(weightRaw))) return;
+
+  state.goals.targetWeight = Number(weightRaw);
+
+  const bfRaw = form.targetBodyFat.value;
+  state.goals.targetBodyFat = bfRaw !== "" && !Number.isNaN(Number(bfRaw)) ? Number(bfRaw) : null;
+
+  const smmRaw = form.targetSkeletalMuscle.value;
+  state.goals.targetSkeletalMuscle =
+    smmRaw !== "" && !Number.isNaN(Number(smmRaw)) ? Number(smmRaw) : null;
+
+  saveState(state);
+  refreshGoalProgressUI();
+}
+
+function refreshGoalProgressUI() {
+  if (!state.plan) return;
+
+  state.plan.objective.progress = computeObjectiveProgress(state);
+  const progress = state.plan.objective.progress;
+
+  const percentEl = document.getElementById("objective-percent");
+  const ring = document.getElementById("objective-ring");
+  if (percentEl) percentEl.textContent = `${progress}%`;
+  if (ring) {
+    const circumference = 2 * Math.PI * 52;
+    ring.style.strokeDasharray = circumference;
+    ring.style.strokeDashoffset = circumference - (progress / 100) * circumference;
+  }
+
+  renderGoalMetricCards();
+  renderKeyResultsList();
+}
+
+function renderGoalMetricCards() {
+  const gp = computeGoalProgress(state);
+  if (!gp) return;
+
+  const isLoss = gp.targetWeight < gp.currentWeight;
+  const weightToGo = Math.round(Math.abs(gp.weightRemaining) * 10) / 10;
+  const weightGoalLabel =
+    gp.weightRemaining === 0
+      ? "목표 달성"
+      : isLoss
+        ? `${weightToGo}kg 감량`
+        : `${weightToGo}kg 증량`;
+
+  document.getElementById("goal-weight-card").innerHTML = renderGoalMetricCard({
+    title: "체중 목표",
+    rows: [
+      ["현재 체중", `${gp.currentWeight}kg`],
+      ["목표 체중", `${gp.targetWeight}kg`],
+      ["남은 목표", weightGoalLabel],
+    ],
+    pct: gp.weightPct,
+    color: "#0d9488",
+  });
+
+  document.getElementById("goal-bodyfat-card").innerHTML = gp.hasBf
+    ? renderGoalMetricCard({
+        title: "체지방률 목표",
+        rows: [
+          ["현재 체지방률", `${gp.bodyFat.current}%`],
+          ["목표 체지방률", `${gp.bodyFat.target}%`],
+          ["남은 목표", `${Math.abs(gp.bodyFat.remaining)}%p`],
+        ],
+        pct: gp.bodyFat.pct,
+        color: "#2563eb",
+      })
+    : renderGoalMetricCard({
+        title: "체지방률 목표",
+        rows: state.goals?.targetBodyFat
+          ? [
+              ["현재 체지방률", "기록 없음"],
+              ["목표 체지방률", `${state.goals.targetBodyFat}%`],
+            ]
+          : [],
+        emptyHint: "체지방률을 기록하면 목표 달성률이 계산됩니다.",
+      });
+
+  document.getElementById("goal-smm-card").innerHTML = gp.hasSmm
+    ? renderGoalMetricCard({
+        title: "골격근량 목표",
+        rows: [
+          [
+            "현재 골격근량",
+            `${gp.skeletalMuscle.current}kg${gp.skeletalMuscle.estimated ? " (추정)" : ""}`,
+          ],
+          ["목표 골격근량", `${gp.skeletalMuscle.target}kg`],
+          ["남은 목표", `${Math.abs(gp.skeletalMuscle.remaining)}kg`],
+        ],
+        pct: gp.skeletalMuscle.pct,
+        color: "#7c3aed",
+      })
+    : renderGoalMetricCard({
+        title: "골격근량 목표",
+        rows: state.goals?.targetSkeletalMuscle
+          ? [
+              ["현재 골격근량", "기록 없음"],
+              ["목표 골격근량", `${state.goals.targetSkeletalMuscle}kg`],
+            ]
+          : [],
+        emptyHint: "골격근량(인바디)을 기록하면 목표 달성률이 계산됩니다.",
+      });
+}
+
+function renderKeyResultsList() {
+  const keyResults = computeKeyResults(state);
+  document.getElementById("kr-list").innerHTML =
+    keyResults.length === 0
+      ? `<p class="empty-state">설정된 Key Results가 없습니다.</p>`
+      : keyResults
+          .map((kr) => {
+            if (kr.noData) {
+              return `
+              <div class="kr-item kr-no-data">
+                <div class="kr-header">
+                  <span>${kr.label}</span>
+                  <span>기록 없음</span>
+                </div>
+                <p class="empty-hint">체지방률을 기록하면 달성률이 계산됩니다.</p>
+              </div>`;
+            }
+            const pct =
+              kr.displayPct != null
+                ? kr.displayPct
+                : kr.target > 0
+                  ? Math.min(100, Math.round((kr.current / kr.target) * 100))
+                  : 0;
+            return `
+              <div class="kr-item">
+                <div class="kr-header">
+                  <span>${kr.label}</span>
+                  <span>${kr.current} / ${kr.target} ${kr.unit}</span>
+                </div>
+                <div class="kr-bar"><div class="kr-bar-fill" style="width:${pct}%"></div></div>
+                <span class="progress-pct">${pct}%</span>
+              </div>`;
+          })
+          .join("");
 }
 
 function showSetupPage(page) {
@@ -1651,119 +1811,18 @@ function renderLog() {
 function renderGoals() {
   if (!state.plan) return;
 
-  const objective = state.plan.objective;
-  const keyResults = computeKeyResults(state);
-  const gp = computeGoalProgress(state);
-
-  document.getElementById("objective-title").textContent = objective.title;
-  document.getElementById("objective-percent").textContent = `${objective.progress}%`;
-
-  const ring = document.getElementById("objective-ring");
-  const circumference = 2 * Math.PI * 52;
-  ring.style.strokeDasharray = circumference;
-  ring.style.strokeDashoffset = circumference - (objective.progress / 100) * circumference;
-
-  if (gp) {
-    const isLoss = gp.targetWeight < gp.currentWeight;
-    const weightToGo = Math.round(Math.abs(gp.weightRemaining) * 10) / 10;
-    const weightGoalLabel =
-      gp.weightRemaining === 0
-        ? "목표 달성"
-        : isLoss
-          ? `${weightToGo}kg 감량`
-          : `${weightToGo}kg 증량`;
-
-    document.getElementById("goal-weight-card").innerHTML = renderGoalMetricCard({
-      title: "체중 목표",
-      rows: [
-        ["현재 체중", `${gp.currentWeight}kg`],
-        ["목표 체중", `${gp.targetWeight}kg`],
-        ["남은 목표", weightGoalLabel],
-      ],
-      pct: gp.weightPct,
-      color: "#0d9488",
-    });
-
-    document.getElementById("goal-bodyfat-card").innerHTML = gp.hasBf
-      ? renderGoalMetricCard({
-          title: "체지방률 목표",
-          rows: [
-            ["현재 체지방률", `${gp.bodyFat.current}%`],
-            ["목표 체지방률", `${gp.bodyFat.target}%`],
-            ["남은 목표", `${Math.abs(gp.bodyFat.remaining)}%p`],
-          ],
-          pct: gp.bodyFat.pct,
-          color: "#2563eb",
-        })
-      : renderGoalMetricCard({
-          title: "체지방률 목표",
-          rows: state.goals?.targetBodyFat
-            ? [
-                ["현재 체지방률", "기록 없음"],
-                ["목표 체지방률", `${state.goals.targetBodyFat}%`],
-              ]
-            : [],
-          emptyHint: "체지방률을 기록하면 목표 달성률이 계산됩니다.",
-        });
-
-    document.getElementById("goal-smm-card").innerHTML = gp.hasSmm
-      ? renderGoalMetricCard({
-          title: "골격근량 목표",
-          rows: [
-            [
-              "현재 골격근량",
-              `${gp.skeletalMuscle.current}kg${gp.skeletalMuscle.estimated ? " (추정)" : ""}`,
-            ],
-            ["목표 골격근량", `${gp.skeletalMuscle.target}kg`],
-            ["남은 목표", `${Math.abs(gp.skeletalMuscle.remaining)}kg`],
-          ],
-          pct: gp.skeletalMuscle.pct,
-          color: "#7c3aed",
-        })
-      : renderGoalMetricCard({
-          title: "골격근량 목표",
-          rows: state.goals?.targetSkeletalMuscle
-            ? [
-                ["현재 골격근량", "기록 없음"],
-                ["목표 골격근량", `${state.goals.targetSkeletalMuscle}kg`],
-              ]
-            : [],
-          emptyHint: "골격근량(인바디)을 기록하면 목표 달성률이 계산됩니다.",
-        });
+  const form = document.getElementById("goal-targets-form");
+  if (form && state.goals) {
+    const active = document.activeElement;
+    const editingTargets = active && form.contains(active);
+    if (!editingTargets) {
+      form.targetWeight.value = state.goals.targetWeight ?? "";
+      form.targetBodyFat.value = state.goals.targetBodyFat ?? "";
+      form.targetSkeletalMuscle.value = state.goals.targetSkeletalMuscle ?? "";
+    }
   }
 
-  document.getElementById("kr-list").innerHTML =
-    keyResults.length === 0
-      ? `<p class="empty-state">설정된 Key Results가 없습니다.</p>`
-      : keyResults
-          .map((kr) => {
-            if (kr.noData) {
-              return `
-              <div class="kr-item kr-no-data">
-                <div class="kr-header">
-                  <span>${kr.label}</span>
-                  <span>기록 없음</span>
-                </div>
-                <p class="empty-hint">체지방률을 기록하면 달성률이 계산됩니다.</p>
-              </div>`;
-            }
-            const pct =
-              kr.displayPct != null
-                ? kr.displayPct
-                : kr.target > 0
-                  ? Math.min(100, Math.round((kr.current / kr.target) * 100))
-                  : 0;
-            return `
-              <div class="kr-item">
-                <div class="kr-header">
-                  <span>${kr.label}</span>
-                  <span>${kr.current} / ${kr.target} ${kr.unit}</span>
-                </div>
-                <div class="kr-bar"><div class="kr-bar-fill" style="width:${pct}%"></div></div>
-                <span class="progress-pct">${pct}%</span>
-              </div>`;
-          })
-          .join("");
+  refreshGoalProgressUI();
 
   document.getElementById("goal-timeline").innerHTML = (state.plan.timeline || [])
     .map(

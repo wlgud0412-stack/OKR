@@ -314,8 +314,10 @@
 
       <section class="page" id="page-goals">
         <div class="card objective-card">
-          <p class="label">Objective</p>
-          <h2 id="objective-title">-</h2>
+          <div class="objective-card-main">
+            <p class="label">Objective</p>
+            <p class="objective-subtitle">체중 · 체지방 · 골격근량 종합 목표</p>
+          </div>
           <div class="progress-ring-wrap">
             <svg class="progress-ring" viewBox="0 0 120 120">
               <circle class="ring-bg" cx="60" cy="60" r="52" />
@@ -323,9 +325,28 @@
             </svg>
             <div class="ring-label">
               <strong id="objective-percent">0%</strong>
-              <span>달성률</span>
+              <span>전체 달성률</span>
             </div>
           </div>
+        </div>
+
+        <div class="card goal-targets-card">
+          <h2>목표치 설정</h2>
+          <p class="empty-hint">목표치를 변경하면 전체 달성률이 바로 업데이트됩니다.</p>
+          <form class="goal-targets-form" id="goal-targets-form">
+            <label>
+              목표 체중 (kg)
+              <input type="number" name="targetWeight" step="0.1" min="30" max="300" required />
+            </label>
+            <label>
+              목표 체지방률 (%) <span class="optional">선택</span>
+              <input type="number" name="targetBodyFat" step="0.1" min="3" max="60" placeholder="18" />
+            </label>
+            <label>
+              목표 골격근량 (kg) <span class="optional">선택</span>
+              <input type="number" name="targetSkeletalMuscle" step="0.1" min="10" max="80" placeholder="32" />
+            </label>
+          </form>
         </div>
 
         <h2 class="section-heading">목표 진행 현황</h2>
