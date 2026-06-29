@@ -24,6 +24,12 @@ const MEAL_MENU_LIBRARY = {
         items: ["닭가슴살 100g", "샐러드 1인분", "삶은 계란 1개"],
         nutrition: { calories: 290, protein: 38, carbs: 12, fat: 8 },
       },
+      {
+        name: "통밀 토스트 & 계란",
+        description: "간단 다이어트 아침",
+        items: ["통밀 토스트 1장", "계란 2개", "방울토마토"],
+        nutrition: { calories: 310, protein: 20, carbs: 28, fat: 12 },
+      },
     ],
     lunch: [
       {
@@ -80,6 +86,18 @@ const MEAL_MENU_LIBRARY = {
         items: ["오트밀 1.5인분", "프로틴 쉐이크 1잔", "견과류"],
         nutrition: { calories: 520, protein: 38, carbs: 58, fat: 16 },
       },
+      {
+        name: "토스트 & 스크램블 에그",
+        description: "간편 고단백 아침",
+        items: ["통밀 토스트 2장", "계란 3개", "아보카도 1/2개"],
+        nutrition: { calories: 540, protein: 28, carbs: 42, fat: 28 },
+      },
+      {
+        name: "그릭요거트 파르페",
+        description: "가벼운 고단백 아침",
+        items: ["그릭요거트 200g", "그래놀라", "블루베리", "아몬드"],
+        nutrition: { calories: 450, protein: 32, carbs: 48, fat: 14 },
+      },
     ],
     lunch: [
       {
@@ -94,6 +112,18 @@ const MEAL_MENU_LIBRARY = {
         items: ["현미밥 1공기", "소고기 150g", "나물 3종"],
         nutrition: { calories: 680, protein: 42, carbs: 75, fat: 22 },
       },
+      {
+        name: "연어 덮밥",
+        description: "오메가3 + 탄수 보충",
+        items: ["현미밥 1공기", "연어 150g", "김·김치"],
+        nutrition: { calories: 620, protein: 40, carbs: 65, fat: 20 },
+      },
+      {
+        name: "닭·두부 덮밥",
+        description: "이중 단백질 점심",
+        items: ["현미밥 1공기", "닭가슴살 120g", "두부 100g", "나물"],
+        nutrition: { calories: 590, protein: 48, carbs: 62, fat: 12 },
+      },
     ],
     dinner: [
       {
@@ -107,6 +137,18 @@ const MEAL_MENU_LIBRARY = {
         description: "단백질 이중 공급",
         items: ["닭가슴살 150g", "두부 150g", "현미밥 2/3공기"],
         nutrition: { calories: 560, protein: 52, carbs: 48, fat: 16 },
+      },
+      {
+        name: "소고기 스테이크 플레이트",
+        description: "고단백 저녁",
+        items: ["소고기 150g", "구운 채소", "고구마 1/2개"],
+        nutrition: { calories: 540, protein: 44, carbs: 38, fat: 22 },
+      },
+      {
+        name: "참치 현미볼",
+        description: "간편 고단백 저녁",
+        items: ["현미밥 2/3공기", "참치 1캔", "샐러드", "올리브오일"],
+        nutrition: { calories: 500, protein: 38, carbs: 52, fat: 16 },
       },
     ],
   },
@@ -179,7 +221,21 @@ function pickBestMenu(menus, budget) {
   }, null);
 }
 
-function generateMealPlanRecommendation(state, dateStr) {
+function pickMenuForMeal(menus, budget, { random = false, excludeNames = [] } = {}) {
+  const available = menus.filter((m) => !excludeNames.includes(m.name));
+  const pool = available.length > 0 ? available : menus;
+  const fitting = pool.filter((m) => fitsBudget(m, budget));
+  const candidates = fitting.length > 0 ? fitting : pool;
+
+  if (random && candidates.length > 1) {
+    const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+    return shuffled[0];
+  }
+
+  return pickBestMenu(candidates, budget);
+}
+
+function generateMealPlanRecommendation(state, dateStr, options = {}) {
   const nutrition = state.nutrition || createEmptyState().nutrition;
   const profile = state.profile;
   if (!nutrition?.calories?.target) return null;
@@ -196,9 +252,17 @@ function generateMealPlanRecommendation(state, dateStr) {
   const library = MEAL_MENU_LIBRARY[purposeKey] || MEAL_MENU_LIBRARY.default;
   const budgets = getMealBudgets(targets);
 
+  const previousMeals = options.previousRec?.meals;
+  const random = Boolean(options.random);
+
   const meals = {};
   ["breakfast", "lunch", "dinner"].forEach((type) => {
-    const menu = pickBestMenu(library[type] || MEAL_MENU_LIBRARY.default[type], budgets[type]);
+    const excludeNames = random && previousMeals?.[type] ? [previousMeals[type].name] : [];
+    const menu = pickMenuForMeal(
+      library[type] || MEAL_MENU_LIBRARY.default[type],
+      budgets[type],
+      { random, excludeNames }
+    );
     if (menu) {
       meals[type] = {
         ...menu,

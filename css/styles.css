@@ -541,15 +541,40 @@ body {
   flex: 1;
 }
 
+.workout-item {
+  position: relative;
+  padding-right: 96px !important;
+}
+
 .workout-item-actions {
   position: absolute;
   right: 0;
   top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
-.workout-item {
-  position: relative;
-  padding-right: 40px !important;
+.workout-video-link {
+  text-decoration: none;
+  color: #dc2626;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.workout-video-link:hover {
+  color: #b91c1c;
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.workout-list-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 4px;
+}
+
+.workout-list-footer.hidden {
+  display: none;
 }
 
 .workout-memo-wrap {
