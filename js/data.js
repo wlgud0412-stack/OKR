@@ -12,7 +12,7 @@ const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 function createEmptyState() {
   return {
-    stateVersion: 3,
+    stateVersion: 5,
     setupStep: "onboarding",
     profile: null,
     goals: null,
@@ -34,6 +34,19 @@ function createEmptyState() {
       fat: { target: 0, current: 0 },
     },
   };
+}
+
+function clearUserActivityData(state) {
+  state.mealLog = [];
+  state.mealRecommendations = {};
+  state.workoutRecommendations = {};
+  state.dailyWorkouts = {};
+  state.workoutTemplate = [];
+  state.selectedRoutineId = null;
+  state.selectedRoutineName = null;
+  state.logHistory = [];
+  state.weightHistory = [];
+  return state;
 }
 
 function toLocalDateStr(d = new Date()) {
@@ -673,6 +686,11 @@ function computeAiFeedback(state, dateStr) {
   }
 
   const feedback = [];
+
+  if (typeof computeCoachFeedbackItems === "function") {
+    feedback.push(...computeCoachFeedbackItems(state));
+  }
+
   const dateLabel = isToday ? "오늘" : selected;
 
   if (workouts.length > 0) {
@@ -714,10 +732,6 @@ function computeAiFeedback(state, dateStr) {
       tag: "주간 운동",
       text: `${weekly.weekLabel} 주간 운동 수행률 ${weekly.pct}% (${weekly.totalDone}/${weekly.totalPlanned}개 완료)`,
     });
-  }
-
-  if (typeof computeCoachFeedbackItems === "function") {
-    feedback.push(...computeCoachFeedbackItems(state));
   }
 
   return feedback;

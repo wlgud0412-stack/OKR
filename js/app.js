@@ -12,16 +12,6 @@ function migrateStateIfNeeded() {
     state.selectedRoutineId = null;
     state.selectedRoutineName = null;
     if (!state.mealRecommendations) state.mealRecommendations = {};
-    const today = todayDateStr();
-    if (state.setupStep === "complete" && state.nutrition?.calories?.target) {
-      state.mealRecommendations[today] = generateMealPlanRecommendation(state, today);
-      const hasMeals = (state.mealLog || []).some(
-        (m) => m.date === today && ["breakfast", "lunch", "dinner"].includes(m.mealType)
-      );
-      if (!hasMeals && state.mealRecommendations[today]) {
-        applyMealRecommendation(state, state.mealRecommendations[today]);
-      }
-    }
   }
 
   if (version < 3 && state.profile) {
@@ -426,6 +416,8 @@ async function runAiGeneration() {
   const plan = generatePlan(state.profile, state.goals);
   const today = todayDateStr();
 
+  clearUserActivityData(state);
+
   state.plan = {
     objective: plan.objective,
     keyResults: plan.keyResults,
@@ -433,17 +425,11 @@ async function runAiGeneration() {
     goalChain: plan.goalChain,
     timeline: plan.timeline,
   };
-  state.workoutTemplate = [];
-  state.dailyWorkouts = {};
   state.nutrition = plan.nutritionTargets;
-  state.mealLog = [];
-  state.mealRecommendations = {};
   state.mealRecommendations[today] = generateMealPlanRecommendation(
     { ...state, nutrition: plan.nutritionTargets },
     today
   );
-  applyMealRecommendation(state, state.mealRecommendations[today]);
-  state.workoutRecommendations = {};
   state.workoutRecommendations[today] = generateWorkoutRoutineRecommendation(
     state.profile,
     state.goals,
@@ -1374,11 +1360,12 @@ function renderToday() {
   const isToday = dateStr === todayDateStr();
   const workouts = getWorkoutsForDate(state, dateStr);
 
-  document.getElementById("coach-message").innerHTML = isToday
-    ? typeof computeLiveCoachMessage === "function"
+  document.getElementById("coach-message").innerHTML =
+    typeof computeLiveCoachMessage === "function" && state.profile
       ? computeLiveCoachMessage(state)
-      : state.plan.coachMessage
-    : `<strong>${dateStr}</strong> 운동 기록입니다.<br>운동 완료 체크, 항목 수정, 메모 편집이 가능합니다.`;
+      : isToday
+        ? state.plan.coachMessage
+        : `<strong>${dateStr}</strong> 운동 기록입니다.<br>운동 완료 체크, 항목 수정, 메모 편집이 가능합니다.`;
 
   const dash = computeTodayDashboard(state);
   document.getElementById("today-dashboard").innerHTML = renderDashboardHTML(dash);
@@ -2145,8 +2132,8 @@ function initAppVersion() {
 function initResetBtn() {
   document.getElementById("reset-btn").addEventListener("click", () => {
     if (!confirm("모든 데이터가 삭제되고 처음부터 다시 시작합니다. 계속할까요?")) return;
-    localStorage.removeItem(STORAGE_KEY);
     state = createEmptyState();
+    saveState(state);
     showSetupFlow();
     document.getElementById("onboarding-form").reset();
     document.getElementById("goals-form").reset();
