@@ -252,29 +252,24 @@
           <div class="dashboard-grid" id="today-dashboard"></div>
         </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-header">
-              <h2 id="workout-section-title">오늘의 운동</h2>
-              <span class="badge" id="workout-progress-badge">0/0</span>
-            </div>
-            <ul class="checklist" id="workout-list"></ul>
-            <div class="daily-progress" id="workout-daily-progress"></div>
+        <div class="card">
+          <div class="card-header">
+            <h2 id="workout-section-title">오늘의 운동</h2>
+            <span class="badge" id="workout-progress-badge">0/0</span>
           </div>
-          <div class="card">
-            <div class="card-header">
-              <h2 id="nutrition-section-title">오늘의 식단</h2>
-              <span class="badge badge-nutrition" id="nutrition-cal-badge">0 kcal</span>
-            </div>
-            <div class="nutrition-summary" id="nutrition-summary"></div>
-          </div>
+          <ul class="checklist" id="workout-list"></ul>
+          <div class="daily-progress" id="workout-daily-progress"></div>
         </div>
 
         <div class="card" id="meal-log-card">
           <div class="card-header">
-            <h2 id="meal-log-title">식단 기록</h2>
-            <span class="text-muted">AI 영양 분석</span>
+            <h2 id="nutrition-section-title">오늘의 식단</h2>
+            <div class="meal-header-badges">
+              <span class="text-muted">AI 영양 분석</span>
+              <span class="badge badge-nutrition" id="nutrition-cal-badge">0 kcal</span>
+            </div>
           </div>
+          <div class="nutrition-summary" id="nutrition-summary"></div>
           <form class="meal-add-form" id="meal-add-form">
             <select name="mealType" required>
               <option value="breakfast">아침</option>
@@ -285,7 +280,7 @@
             <input type="text" name="foodName" placeholder="예: 삶은 계란 2개, 바나나 1개" required />
             <button type="submit" class="btn btn-primary">추가</button>
           </form>
-          <div class="meal-sections" id="meal-sections"></div>
+          <div class="meal-sections-grid" id="meal-sections"></div>
         </div>
 
         <div class="card ai-feedback-card">

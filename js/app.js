@@ -447,10 +447,9 @@ function updateDateDisplay() {
   if (workoutTitle) workoutTitle.textContent = isToday ? "오늘의 운동" : "운동 기록";
 
   const nutritionTitle = document.getElementById("nutrition-section-title");
-  if (nutritionTitle) nutritionTitle.textContent = isToday ? "오늘의 식단" : "식단 기록";
-
-  const mealLogTitle = document.getElementById("meal-log-title");
-  if (mealLogTitle) mealLogTitle.textContent = isToday ? "식단 기록" : `${dateStr} 식단 기록`;
+  if (nutritionTitle) {
+    nutritionTitle.textContent = isToday ? "오늘의 식단" : `${dateStr} 식단`;
+  }
 }
 
 function renderAll() {
@@ -732,8 +731,9 @@ function renderToday() {
 
 function renderNutritionSection(dateStr) {
   const nutrition = state.nutrition || createEmptyState().nutrition;
+  const totals = computeNutritionTotalsForDate(state, dateStr);
   document.getElementById("nutrition-cal-badge").textContent =
-    `목표 ${nutrition.calories.target.toLocaleString()} kcal`;
+    `${totals.calories.toLocaleString()} / ${nutrition.calories.target.toLocaleString()} kcal`;
 
   const nutritionItems = computeNutritionProgress(state, dateStr);
   document.getElementById("nutrition-summary").innerHTML = nutritionItems
@@ -741,6 +741,63 @@ function renderNutritionSection(dateStr) {
       renderProgressBar(n.label, n.pct, `${n.current} / ${n.target} ${n.unit}`, n.color)
     )
     .join("");
+}
+
+function sumMealNutrition(items) {
+  return items.reduce(
+    (acc, m) => ({
+      calories: acc.calories + (m.nutrition?.calories || 0),
+      protein: acc.protein + (m.nutrition?.protein || 0),
+      carbs: acc.carbs + (m.nutrition?.carbs || 0),
+      fat: acc.fat + (m.nutrition?.fat || 0),
+    }),
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+}
+
+function renderMealItemHtml(m, canEdit) {
+  return `
+    <div class="meal-item" data-id="${m.id}">
+      <div class="meal-item-info">
+        <strong>${escapeHtml(m.name)}</strong>
+        <span class="meal-nutrition">
+          ${m.nutrition.calories} kcal · P ${m.nutrition.protein}g
+        </span>
+        ${m.confidence === "estimate" ? '<span class="meal-estimate">AI 추정</span>' : ""}
+      </div>
+      ${
+        canEdit
+          ? `<div class="meal-item-actions">
+              <button type="button" class="btn-icon edit-meal" data-id="${m.id}" title="수정">✏️</button>
+              <button type="button" class="btn-icon delete-meal" data-id="${m.id}" title="삭제">🗑️</button>
+            </div>`
+          : ""
+      }
+    </div>`;
+}
+
+function renderMealColumn(type, items, canEdit) {
+  const totals = sumMealNutrition(items);
+  const itemsHtml =
+    items.length > 0
+      ? items.map((m) => renderMealItemHtml(m, canEdit)).join("")
+      : `<p class="meal-empty">${canEdit ? "음식을 추가하세요" : "기록 없음"}</p>`;
+
+  return `
+    <div class="meal-column" data-meal-type="${type}">
+      <div class="meal-column-header">
+        <h4>${MEAL_LABELS[type]}</h4>
+        <span class="meal-column-kcal">${totals.calories > 0 ? `${totals.calories} kcal` : "-"}</span>
+      </div>
+      <div class="meal-column-body">
+        ${itemsHtml}
+      </div>
+      ${
+        totals.calories > 0
+          ? `<div class="meal-column-footer">P ${totals.protein}g · C ${totals.carbs}g · F ${totals.fat}g</div>`
+          : ""
+      }
+    </div>`;
 }
 
 function renderMealSections(dateStr) {
@@ -756,50 +813,35 @@ function renderMealSections(dateStr) {
   }
 
   const meals = getMealsForDate(state, dateStr);
-  const types = ["breakfast", "lunch", "snack", "dinner"];
+  const mainTypes = ["breakfast", "lunch", "dinner"];
+  const snackItems = meals.filter((m) => m.mealType === "snack");
 
-  if (meals.length === 0) {
-    container.innerHTML = canEdit
-      ? `<p class="empty-state">아침, 점심, 간식, 저녁 식사를 추가해보세요.</p>`
-      : `<p class="empty-state">이 날짜의 식단 기록이 없습니다.</p>`;
-    return;
-  }
-
-  container.innerHTML = types
+  const mainGrid = mainTypes
     .map((type) => {
       const items = meals.filter((m) => m.mealType === type);
-      if (items.length === 0) return "";
-
-      const itemsHtml = items
-        .map(
-          (m) => `
-          <div class="meal-item" data-id="${m.id}">
-            <div class="meal-item-info">
-              <strong>${escapeHtml(m.name)}</strong>
-              <span class="meal-nutrition">
-                ${m.nutrition.calories} kcal · P ${m.nutrition.protein}g · C ${m.nutrition.carbs}g · F ${m.nutrition.fat}g
-              </span>
-              ${m.confidence === "estimate" ? '<span class="meal-estimate">AI 추정</span>' : ""}
-            </div>
-            ${
-              canEdit
-                ? `<div class="meal-item-actions">
-                    <button type="button" class="btn-icon edit-meal" data-id="${m.id}" title="수정">✏️</button>
-                    <button type="button" class="btn-icon delete-meal" data-id="${m.id}" title="삭제">🗑️</button>
-                  </div>`
-                : ""
-            }
-          </div>`
-        )
-        .join("");
-
-      return `
-        <div class="meal-group">
-          <h4>${MEAL_LABELS[type]}</h4>
-          ${itemsHtml}
-        </div>`;
+      return renderMealColumn(type, items, canEdit);
     })
     .join("");
+
+  const snackHtml =
+    snackItems.length > 0
+      ? `
+      <div class="meal-snack-row">
+        <div class="meal-column meal-column-snack" data-meal-type="snack">
+          <div class="meal-column-header">
+            <h4>${MEAL_LABELS.snack}</h4>
+            <span class="meal-column-kcal">${sumMealNutrition(snackItems).calories} kcal</span>
+          </div>
+          <div class="meal-column-body meal-snack-items">
+            ${snackItems.map((m) => renderMealItemHtml(m, canEdit)).join("")}
+          </div>
+        </div>
+      </div>`
+      : "";
+
+  container.innerHTML = `
+    <div class="meal-grid">${mainGrid}</div>
+    ${snackHtml}`;
 
   if (canEdit) {
     container.querySelectorAll(".delete-meal").forEach((btn) => {
