@@ -363,7 +363,7 @@ function getWorkoutsForDate(state, dateStr, autoCreate = true) {
   if (!state.dailyWorkouts) state.dailyWorkouts = {};
 
   if (state.dailyWorkouts[dateStr]?.length) {
-    return state.dailyWorkouts[dateStr];
+    return state.dailyWorkouts[dateStr].map(normalizeWorkoutEntry);
   }
 
   if (!autoCreate || dateStr > todayDateStr()) return [];
@@ -372,13 +372,15 @@ function getWorkoutsForDate(state, dateStr, autoCreate = true) {
 
   const template = state.workoutTemplate;
 
-  const newWorkouts = template.map((w, i) => ({
-    id: Date.parse(dateStr) + i,
-    title: w.title,
-    meta: w.meta,
-    done: false,
-    memo: "",
-  }));
+  const newWorkouts = template.map((w, i) =>
+    normalizeWorkoutEntry({
+      id: Date.parse(dateStr) + i,
+      title: w.title,
+      meta: w.meta,
+      done: false,
+      memo: "",
+    })
+  );
 
   state.dailyWorkouts[dateStr] = newWorkouts;
   return newWorkouts;
@@ -386,7 +388,7 @@ function getWorkoutsForDate(state, dateStr, autoCreate = true) {
 
 function setWorkoutsForDate(state, dateStr, workouts) {
   if (!state.dailyWorkouts) state.dailyWorkouts = {};
-  state.dailyWorkouts[dateStr] = workouts;
+  state.dailyWorkouts[dateStr] = workouts.map(normalizeWorkoutEntry);
 }
 
 function getActiveWorkouts(state) {
@@ -594,7 +596,8 @@ function computeKeyResults(state) {
   if (!state.plan?.keyResults || !state.goals) return [];
 
   const weekDaysDone = countWeekWorkoutDays(state);
-  const weekRunning = computeWeekRunningKm(state);
+  const cardioGoal = computeWeekCardioForGoal(state);
+  const weekRunning = cardioGoal.equivalentKm;
   const gp = computeGoalProgress(state);
   const profile = state.profile;
 
@@ -613,6 +616,7 @@ function computeKeyResults(state) {
         kr.target > 0 ? Math.min(100, Math.round((weekDaysDone / kr.target) * 100)) : 0;
     } else if (kr.label.includes("러닝")) {
       copy.current = Math.round(weekRunning * 10) / 10;
+      copy.displayCurrent = formatCardioKrCurrent(cardioGoal, copy.current);
       copy.displayPct =
         kr.target > 0 ? Math.min(100, Math.round((weekRunning / kr.target) * 100)) : 0;
     } else if (kr.label.includes("체지방")) {
@@ -653,20 +657,7 @@ function computeObjectiveProgress(state) {
 }
 
 function computeWeekRunningKm(state, dateStr) {
-  const { weekDates } = getWeekContext(state, dateStr);
-  const today = todayDateStr();
-  let total = 0;
-  weekDates.forEach((d) => {
-    if (!isWeekDayCountable(d, today)) return;
-    const workouts = state.dailyWorkouts?.[d] || [];
-    workouts.forEach((w) => {
-      if (w.title.includes("러닝") && w.done) {
-        const m = w.meta.match(/([\d.]+)\s*km/);
-        if (m) total += parseFloat(m[1]);
-      }
-    });
-  });
-  return total;
+  return computeWeekCardioForGoal(state, dateStr).equivalentKm;
 }
 
 function computeAiFeedback(state, dateStr) {

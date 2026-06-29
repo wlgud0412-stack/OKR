@@ -1,6 +1,6 @@
 let state = loadState();
 
-const STATE_VERSION = 3;
+const STATE_VERSION = 4;
 
 function migrateStateIfNeeded() {
   const version = state.stateVersion || 0;
@@ -41,6 +41,20 @@ function migrateStateIfNeeded() {
         r.skeletalMuscle = estimateSkeletalMuscle(r.weight, r.bodyFat, state.profile.gender);
       }
     });
+  }
+
+  if (version < 4) {
+    if (state.workoutTemplate?.length) {
+      state.workoutTemplate = state.workoutTemplate.map((w) => {
+        const normalized = normalizeWorkoutEntry(w);
+        return { title: normalized.title, meta: normalized.meta };
+      });
+    }
+    if (state.dailyWorkouts) {
+      Object.keys(state.dailyWorkouts).forEach((dateStr) => {
+        state.dailyWorkouts[dateStr] = state.dailyWorkouts[dateStr].map(normalizeWorkoutEntry);
+      });
+    }
   }
 
   state.stateVersion = STATE_VERSION;
@@ -243,7 +257,7 @@ function renderKeyResultsList() {
               <div class="kr-item">
                 <div class="kr-header">
                   <span>${kr.label}</span>
-                  <span>${kr.current} / ${kr.target} ${kr.unit}</span>
+                  <span>${kr.displayCurrent != null ? `${kr.displayCurrent} / ${kr.target} ${kr.unit}` : `${kr.current} / ${kr.target} ${kr.unit}`}</span>
                 </div>
                 <div class="kr-bar"><div class="kr-bar-fill" style="width:${pct}%"></div></div>
                 <span class="progress-pct">${pct}%</span>
@@ -1084,7 +1098,7 @@ function renderWorkoutRoutinePicker(dateStr) {
   picker.innerHTML = `
     <div class="routine-picker-header">
       <h3>추천 운동 루틴 선택</h3>
-      <p class="empty-hint">마음에 드는 루틴을 선택하면 오늘의 운동 목록이 생성됩니다. (세트 4~5세트 기준)</p>
+      <p class="empty-hint">마음에 드는 루틴을 선택하면 오늘의 운동 목록이 생성됩니다. (웨이트는 세트, 유산소는 km·분 기준)</p>
     </div>
     <div class="routine-cards">
       ${options
@@ -1141,10 +1155,15 @@ function bindWorkoutListEvents(workouts, dateStr, canEdit) {
       if (!w) return;
       const newTitle = prompt("운동명:", w.title);
       if (newTitle === null) return;
-      const newMeta = prompt("세부 정보 (세트/횟수 등):", w.meta);
+      const draft = normalizeWorkoutEntry({ ...w, title: newTitle.trim() || w.title });
+      const newMeta = prompt(getWorkoutMetaHint(draft), draft.meta);
       if (newMeta === null) return;
+      const title = newTitle.trim() || w.title;
+      const meta = isCardioWorkout({ title, meta: newMeta })
+        ? normalizeCardioMeta(title, newMeta.trim())
+        : newMeta.trim() || w.meta;
       const updated = workouts.map((x) =>
-        x.id === id ? { ...x, title: newTitle.trim() || x.title, meta: newMeta.trim() || x.meta } : x
+        x.id === id ? normalizeWorkoutEntry({ ...x, title, meta }) : x
       );
       syncWorkoutTemplateFromDaily(updated);
       saveActiveWorkouts(updated);
@@ -1175,6 +1194,11 @@ function renderWorkoutListHtml(workouts, canEdit = true) {
   return workouts
     .map((w) => {
       const videoUrl = getExerciseVideoUrl(w.title);
+      const memoPlaceholder = isCardioWorkout(w)
+        ? "메모 (예: 페이스, 심박)"
+        : isStretchWorkout(w)
+          ? "메모 (예: 스트레칭 부위)"
+          : "메모 (예: 80kg, 8회)";
       return `
     <li class="workout-item ${w.done ? "done" : ""}" data-id="${w.id}">
       <label class="check-label">
@@ -1190,7 +1214,7 @@ function renderWorkoutListHtml(workouts, canEdit = true) {
         ${canEdit ? `<button type="button" class="btn-icon delete-workout" data-id="${w.id}" title="삭제">🗑️</button>` : ""}
       </div>
       <div class="workout-memo-wrap">
-        <input type="text" class="workout-memo" data-id="${w.id}" placeholder="메모 (예: 80kg, 8회)" value="${escapeHtml(w.memo || "")}" />
+        <input type="text" class="workout-memo" data-id="${w.id}" placeholder="${memoPlaceholder}" value="${escapeHtml(w.memo || "")}" />
       </div>
     </li>`;
     })

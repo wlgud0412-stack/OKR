@@ -8,7 +8,7 @@ function getWorkoutRoutineOptions(profile, goals) {
 
   const stretch = { title: "스트레칭", meta: "10~15분" };
   const running =
-    dailyKm > 0 ? { title: "러닝", meta: `${dailyKm}km · 4~5세트 페이스 러닝` } : null;
+    dailyKm > 0 ? { title: "러닝", meta: `${dailyKm}km` } : null;
 
   function withExtras(exercises) {
     const list = [...exercises];

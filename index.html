@@ -334,16 +334,25 @@
           <h2>목표치 설정</h2>
           <p class="empty-hint">목표치를 변경하면 전체 달성률이 바로 업데이트됩니다.</p>
           <form class="goal-targets-form" id="goal-targets-form">
-            <label>
-              목표 체중 (kg)
+            <label class="goal-target-field">
+              <span class="goal-target-label">
+                <span>목표 체중 (kg)</span>
+                <span class="optional optional--spacer" aria-hidden="true">선택</span>
+              </span>
               <input type="number" name="targetWeight" step="0.1" min="30" max="300" required />
             </label>
-            <label>
-              목표 체지방률 (%) <span class="optional">선택</span>
+            <label class="goal-target-field">
+              <span class="goal-target-label">
+                <span>목표 체지방률 (%)</span>
+                <span class="optional">선택</span>
+              </span>
               <input type="number" name="targetBodyFat" step="0.1" min="3" max="60" placeholder="18" />
             </label>
-            <label>
-              목표 골격근량 (kg) <span class="optional">선택</span>
+            <label class="goal-target-field">
+              <span class="goal-target-label">
+                <span>목표 골격근량 (kg)</span>
+                <span class="optional">선택</span>
+              </span>
               <input type="number" name="targetSkeletalMuscle" step="0.1" min="10" max="80" placeholder="32" />
             </label>
           </form>
@@ -547,6 +556,7 @@
     </div>
   </div>
 
+  <script src="js/workout-utils.js"></script>
   <script src="js/data.js"></script>
   <script src="js/nutrition.js"></script>
   <script src="js/exercise-videos.js"></script>

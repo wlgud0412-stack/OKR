@@ -107,16 +107,16 @@ const EXERCISE_CATALOG = {
   },
   cardio: {
     gym: [
-      { title: "러닝", meta: "4세트 × 5분 (인터벌)", tip: "유산소" },
-      { title: "사이클", meta: "4세트 × 5분", tip: "저충격 유산소" },
-      { title: "로잉", meta: "4세트 × 500m", tip: "전신 유산소" },
-      { title: "스텝밀", meta: "4세트 × 5분", tip: "하체·심폐" },
+      { title: "러닝", meta: "3km", tip: "유산소 · 거리" },
+      { title: "사이클", meta: "20분", tip: "저충격 유산소" },
+      { title: "로잉", meta: "15분", tip: "전신 유산소" },
+      { title: "스텝밀", meta: "15분", tip: "하체·심폐" },
     ],
     home: [
-      { title: "러닝", meta: "20~30분", tip: "야외·트레드밀" },
-      { title: "줄넘기", meta: "4세트 × 2분", tip: "순발력·유산소" },
-      { title: "버피", meta: "4세트 × 10~15회", tip: "전신 유산소" },
-      { title: "마운틴 클라이머", meta: "4세트 × 45초", tip: "HIIT" },
+      { title: "러닝", meta: "3km", tip: "야외·트레드밀" },
+      { title: "줄넘기", meta: "10분", tip: "순발력·유산소" },
+      { title: "버피", meta: "15분", tip: "전신 유산소" },
+      { title: "인터벌 러닝", meta: "20분", tip: "HIIT" },
     ],
   },
   stretch: {
