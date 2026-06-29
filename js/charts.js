@@ -6,8 +6,8 @@ function renderSvgLineChart(containerId, options) {
     data,
     goalValue,
     unit = "",
-    lineColor = "#22c55e",
-    goalColor = "#8b9cb0",
+    lineColor = "#0d9488",
+    goalColor = "#94a3b8",
     emptyMessage = "기록을 2회 이상 입력하면 그래프가 표시됩니다.",
   } = options;
 
@@ -53,7 +53,7 @@ function renderSvgLineChart(containerId, options) {
     const v = minY + ((maxY - minY) * i) / yTicks;
     const y = toY(v);
     gridSvg += `
-      <line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="#243040" stroke-width="1" />
+      <line x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" stroke="#e2e8f0" stroke-width="1" />
       <text x="${pad.left - 8}" y="${y + 4}" text-anchor="end" class="chart-axis-label">${v.toFixed(1)}</text>`;
   }
 
@@ -69,7 +69,7 @@ function renderSvgLineChart(containerId, options) {
   const dots = data
     .map(
       (d, i) =>
-        `<circle cx="${toX(i)}" cy="${toY(d.value)}" r="4" fill="${lineColor}" stroke="#111921" stroke-width="2">
+        `<circle cx="${toX(i)}" cy="${toY(d.value)}" r="4" fill="${lineColor}" stroke="#ffffff" stroke-width="2">
           <title>${d.label}: ${d.value}${unit}</title>
         </circle>`
     )

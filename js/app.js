@@ -311,14 +311,14 @@ function renderBodyCharts() {
     data: getWeightChartData(state),
     goalValue: goals?.targetWeight ?? null,
     unit: "kg",
-    lineColor: "#22c55e",
+    lineColor: "#0d9488",
     emptyMessage: "체중을 2회 이상 기록하면 그래프가 표시됩니다.",
   });
   renderSvgLineChart("weight-chart", {
     data: getWeightChartData(state),
     goalValue: goals?.targetWeight ?? null,
     unit: "kg",
-    lineColor: "#22c55e",
+    lineColor: "#0d9488",
     emptyMessage: "체중을 2회 이상 기록하면 그래프가 표시됩니다.",
   });
 
@@ -327,14 +327,14 @@ function renderBodyCharts() {
     data: bfData,
     goalValue: goals?.targetBodyFat ?? null,
     unit: "%",
-    lineColor: "#3b82f6",
+    lineColor: "#2563eb",
     emptyMessage: "체지방률을 2회 이상 기록하면 그래프가 표시됩니다.",
   });
   renderSvgLineChart("bodyfat-chart", {
     data: bfData,
     goalValue: goals?.targetBodyFat ?? null,
     unit: "%",
-    lineColor: "#3b82f6",
+    lineColor: "#2563eb",
     emptyMessage: "체지방률을 2회 이상 기록하면 그래프가 표시됩니다.",
   });
 }
@@ -541,7 +541,7 @@ function renderDashboardHTML(dash) {
   return `
     <div class="dash-block">
       <h3>🏋️ ${dateLabel} 운동</h3>
-      ${renderProgressBar("일일 운동 달성률", workout.pct, `${workout.done}/${workout.total}개 완료 · ${workout.remaining}개 남음`, "#22c55e")}
+      ${renderProgressBar("일일 운동 달성률", workout.pct, `${workout.done}/${workout.total}개 완료 · ${workout.remaining}개 남음`, "#0d9488")}
       <div class="dash-stats-row">
         <div><span>완료</span><strong>${workout.done}개</strong></div>
         <div><span>남음</span><strong>${workout.remaining}개</strong></div>
@@ -560,7 +560,7 @@ function renderDashboardHTML(dash) {
     </div>
     <div class="dash-block">
       <h3>📊 주간 운동 수행률</h3>
-      ${renderProgressBar("주간 수행률", weekly.pct, `${weekly.weekLabel} · ${weekly.totalDone}/${weekly.totalPlanned}개 완료`, "#3b82f6")}
+      ${renderProgressBar("주간 수행률", weekly.pct, `${weekly.weekLabel} · ${weekly.totalDone}/${weekly.totalPlanned}개 완료`, "#2563eb")}
       <div class="dash-stats-row">
         <div><span>주간 완료</span><strong>${weekly.totalDone}개</strong></div>
         <div><span>주간 전체</span><strong>${weekly.totalPlanned}개</strong></div>
@@ -701,7 +701,7 @@ function renderToday() {
         <span>운동 목표 달성률</span>
         <strong>${wp.pct}%</strong>
       </div>
-      ${renderProgressBar("", wp.pct, `완료 ${wp.done}개 / 전체 ${wp.total}개`, "#22c55e")}
+      ${renderProgressBar("", wp.pct, `완료 ${wp.done}개 / 전체 ${wp.total}개`, "#0d9488")}
     `;
   }
 
@@ -893,7 +893,7 @@ function renderLog() {
   if (rangeEl) rangeEl.textContent = weekly.weekLabel;
 
   document.getElementById("log-weekly-summary").innerHTML = `
-    ${renderProgressBar("주간 운동 수행률", weekly.pct, `${weekly.totalDone}/${weekly.totalPlanned}개 완료 · ${weekly.remaining}개 남음`, "#3b82f6")}
+    ${renderProgressBar("주간 운동 수행률", weekly.pct, `${weekly.totalDone}/${weekly.totalPlanned}개 완료 · ${weekly.remaining}개 남음`, "#2563eb")}
   `;
 
   const weeklyChart = computeWeeklyChart(state, dateStr);
@@ -947,7 +947,7 @@ function renderGoals() {
         ["남은 목표", weightGoalLabel],
       ],
       pct: gp.weightPct,
-      color: "#22c55e",
+      color: "#0d9488",
     });
 
     document.getElementById("goal-bodyfat-card").innerHTML = gp.hasBf
@@ -959,7 +959,7 @@ function renderGoals() {
             ["남은 목표", `${Math.abs(gp.bodyFat.remaining)}%p`],
           ],
           pct: gp.bodyFat.pct,
-          color: "#3b82f6",
+          color: "#2563eb",
         })
       : renderGoalMetricCard({
           title: "체지방률 목표",
