@@ -12,7 +12,7 @@ const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 function createEmptyState() {
   return {
-    stateVersion: 2,
+    stateVersion: 3,
     setupStep: "onboarding",
     profile: null,
     goals: null,
@@ -77,7 +77,13 @@ function loadState() {
       date: r.date,
       weight: r.weight,
       bodyFat: r.bodyFat ?? null,
+      skeletalMuscle: r.skeletalMuscle ?? null,
     }));
+    if (merged.profile) {
+      if (merged.profile.startSkeletalMuscle == null && merged.profile.skeletalMuscle != null) {
+        merged.profile.startSkeletalMuscle = merged.profile.skeletalMuscle;
+      }
+    }
     if (merged.profile && merged.profile.startWeight == null) {
       const earliest = [...(merged.weightHistory || [])].sort((a, b) =>
         a.date.localeCompare(b.date)
@@ -102,6 +108,63 @@ function loadState() {
 
 function saveState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function estimateSkeletalMuscle(weight, bodyFat, gender) {
+  if (weight == null || bodyFat == null) return null;
+  const leanMass = weight * (1 - bodyFat / 100);
+  const ratio = gender === "여성" ? 0.42 : 0.45;
+  return Math.round(leanMass * ratio * 10) / 10;
+}
+
+function getCurrentSkeletalMuscle(state) {
+  const profile = state.profile;
+  const latest = getLatestBodyMetric(state);
+  const measured =
+    latest?.skeletalMuscle ??
+    profile?.skeletalMuscle ??
+    null;
+  if (measured != null) {
+    return { current: measured, estimated: false };
+  }
+  const weight = latest?.weight ?? profile?.weight;
+  const bf = latest?.bodyFat ?? profile?.bodyFat;
+  const est = estimateSkeletalMuscle(weight, bf, profile?.gender);
+  return { current: est, estimated: est != null };
+}
+
+function getTargetSkeletalMuscle(state) {
+  const goals = state.goals;
+  if (goals?.targetSkeletalMuscle != null) return goals.targetSkeletalMuscle;
+  const profile = state.profile;
+  const smm = getCurrentSkeletalMuscle(state);
+  if (smm.current == null) return null;
+  if (profile?.purpose === "근비대") {
+    return Math.round((smm.current + 2) * 10) / 10;
+  }
+  if (profile?.purpose === "다이어트") {
+    return Math.round(smm.current * 10) / 10;
+  }
+  return Math.round((smm.current + 0.5) * 10) / 10;
+}
+
+function getSkeletalMuscleRecords(state) {
+  return getSortedBodyMetrics(state).filter(
+    (r) => r.skeletalMuscle != null && !Number.isNaN(Number(r.skeletalMuscle))
+  );
+}
+
+function getSkeletalMuscleChartData(state) {
+  const profile = state.profile;
+  return getSortedBodyMetrics(state)
+    .map((r) => {
+      const val =
+        r.skeletalMuscle ??
+        estimateSkeletalMuscle(r.weight, r.bodyFat, profile?.gender);
+      if (val == null) return null;
+      return { date: r.date, label: formatChartDate(r.date), value: val };
+    })
+    .filter(Boolean);
 }
 
 function calcBMR(profile) {
@@ -172,6 +235,23 @@ function generatePlan(profile, goals) {
       current: 0,
       target: profile.bodyFat - goals.targetBodyFat,
       unit: "%",
+    });
+  }
+
+  const smmStart =
+    profile.skeletalMuscle ??
+    estimateSkeletalMuscle(profile.weight, profile.bodyFat, profile.gender);
+  const smmTarget =
+    goals.targetSkeletalMuscle ??
+    (profile.purpose === "근비대" && smmStart != null
+      ? Math.round((smmStart + 2) * 10) / 10
+      : null);
+  if (smmStart != null && smmTarget != null && smmTarget !== smmStart) {
+    keyResults.push({
+      label: `골격근량 ${Math.abs(smmTarget - smmStart).toFixed(1)}kg ${smmTarget > smmStart ? "증가" : "유지"}`,
+      current: 0,
+      target: Math.abs(smmTarget - smmStart) || 0.1,
+      unit: "kg",
     });
   }
 
@@ -545,6 +625,16 @@ function computeKeyResults(state) {
         copy.target = gp.bodyFat.targetDelta;
         copy.displayPct = gp.bodyFat.pct;
       }
+    } else if (kr.label.includes("골격근")) {
+      if (!gp?.hasSmm) {
+        copy.noData = true;
+        copy.current = null;
+        copy.displayPct = null;
+      } else {
+        copy.current = Math.round(gp.skeletalMuscle.progress * 10) / 10;
+        copy.target = gp.skeletalMuscle.targetDelta;
+        copy.displayPct = gp.skeletalMuscle.pct;
+      }
     }
 
     return copy;
@@ -633,6 +723,10 @@ function computeAiFeedback(state, dateStr) {
     });
   }
 
+  if (typeof computeCoachFeedbackItems === "function") {
+    feedback.push(...computeCoachFeedbackItems(state));
+  }
+
   return feedback;
 }
 
@@ -695,19 +789,29 @@ function getBodyFatRecords(state) {
   );
 }
 
-function upsertBodyMetric(state, dateStr, weight, bodyFat) {
+function upsertBodyMetric(state, dateStr, weight, bodyFat, skeletalMuscle) {
   if (!state.weightHistory) state.weightHistory = [];
   const idx = state.weightHistory.findIndex((w) => w.date === dateStr);
+  const prev = idx >= 0 ? state.weightHistory[idx] : null;
   const entry = {
     date: dateStr,
     weight: Number(weight),
     bodyFat:
       bodyFat != null && bodyFat !== "" && !Number.isNaN(Number(bodyFat))
         ? Number(bodyFat)
-        : idx >= 0
-          ? state.weightHistory[idx].bodyFat
-          : null,
+        : prev?.bodyFat ?? null,
+    skeletalMuscle:
+      skeletalMuscle != null && skeletalMuscle !== "" && !Number.isNaN(Number(skeletalMuscle))
+        ? Number(skeletalMuscle)
+        : prev?.skeletalMuscle ?? null,
   };
+  if (entry.skeletalMuscle == null && entry.bodyFat != null) {
+    entry.skeletalMuscle = estimateSkeletalMuscle(
+      entry.weight,
+      entry.bodyFat,
+      state.profile?.gender
+    );
+  }
   if (idx >= 0) {
     state.weightHistory[idx] = entry;
   } else {
@@ -770,6 +874,36 @@ function computeGoalProgress(state) {
     };
   }
 
+  const smmRecords = getSkeletalMuscleRecords(state);
+  const smmCurrent = getCurrentSkeletalMuscle(state);
+  const smmTargetVal = getTargetSkeletalMuscle(state);
+  const hasSmm = smmCurrent.current != null && smmTargetVal != null;
+  let skeletalMuscle = null;
+  if (hasSmm) {
+    const startSmm =
+      profile.startSkeletalMuscle ??
+      profile.skeletalMuscle ??
+      smmRecords[0]?.skeletalMuscle ??
+      smmCurrent.current;
+    const latestSmm = smmCurrent.current;
+    const totalGain = smmTargetVal - startSmm;
+    const currentGain = latestSmm - startSmm;
+    skeletalMuscle = {
+      current: latestSmm,
+      target: smmTargetVal,
+      estimated: smmCurrent.estimated,
+      progress: totalGain !== 0 ? Math.max(0, currentGain) : 0,
+      targetDelta: Math.abs(totalGain) > 0 ? Math.abs(totalGain) : 0.1,
+      pct:
+        Math.abs(totalGain) > 0
+          ? Math.min(100, Math.round((currentGain / totalGain) * 100))
+          : latestSmm >= smmTargetVal
+            ? 100
+            : 0,
+      remaining: Math.round((smmTargetVal - latestSmm) * 10) / 10,
+    };
+  }
+
   return {
     currentWeight,
     targetWeight,
@@ -779,5 +913,7 @@ function computeGoalProgress(state) {
     weightTargetDelta: weightDiff,
     bodyFat,
     hasBf,
+    skeletalMuscle,
+    hasSmm,
   };
 }

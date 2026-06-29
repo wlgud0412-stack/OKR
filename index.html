@@ -62,6 +62,10 @@
               <input type="number" name="bodyFat" step="0.1" min="3" max="60" placeholder="25" />
             </label>
             <label>
+              골격근량 (kg) <span class="optional">인바디 등</span>
+              <input type="number" name="skeletalMuscle" step="0.1" min="10" max="80" placeholder="30" />
+            </label>
+            <label>
               운동 경력
               <select name="experience" required>
                 <option value="">선택</option>
@@ -128,6 +132,10 @@
             <label>
               목표 체지방률 (%) <span class="optional">선택</span>
               <input type="number" name="targetBodyFat" step="0.1" min="3" max="60" placeholder="18" />
+            </label>
+            <label>
+              목표 골격근량 (kg) <span class="optional">선택</span>
+              <input type="number" name="targetSkeletalMuscle" step="0.1" min="10" max="80" placeholder="32" />
             </label>
             <label>
               목표 달성 기간 (개월)
@@ -321,9 +329,10 @@
         </div>
 
         <h2 class="section-heading">목표 진행 현황</h2>
-        <div class="goal-cards grid-2">
+        <div class="goal-cards">
           <div class="card goal-metric-card" id="goal-weight-card"></div>
           <div class="card goal-metric-card" id="goal-bodyfat-card"></div>
+          <div class="card goal-metric-card" id="goal-smm-card"></div>
         </div>
 
         <div class="card">
@@ -396,6 +405,10 @@
                 체지방률 (%) <span class="optional">선택</span>
                 <input type="number" name="bodyFat" step="0.1" min="3" max="60" placeholder="22.5" />
               </label>
+              <label>
+                골격근량 (kg) <span class="optional">인바디</span>
+                <input type="number" name="skeletalMuscle" step="0.1" min="10" max="80" placeholder="30" />
+              </label>
               <button type="submit" class="btn btn-primary">저장</button>
             </form>
           </div>
@@ -409,9 +422,13 @@
             <h2>체지방률 변화</h2>
             <div id="log-bodyfat-chart"></div>
           </div>
+          <div class="card">
+            <h2>골격근량 변화</h2>
+            <div id="log-smm-chart"></div>
+          </div>
         </div>
         <div class="card">
-          <h2>체중 · 체지방률 기록 목록</h2>
+          <h2>체중 · 체지방 · 골격근량 기록</h2>
           <div class="metrics-table-wrap" id="metrics-table"></div>
         </div>
         <div class="card">
@@ -437,6 +454,10 @@
           <div class="card">
             <h2>체지방률 변화</h2>
             <div id="bodyfat-chart"></div>
+          </div>
+          <div class="card">
+            <h2>골격근량 변화</h2>
+            <div id="smm-chart"></div>
           </div>
         </div>
         <div class="card">
@@ -511,6 +532,7 @@
   <script src="js/meal-videos.js"></script>
   <script src="js/meal-plans.js"></script>
   <script src="js/meal-catalog.js"></script>
+  <script src="js/coach-advice.js"></script>
   <script src="js/workout-routines.js"></script>
   <script src="js/exercise-videos.js"></script>
   <script src="js/exercise-catalog.js"></script>

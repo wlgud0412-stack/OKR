@@ -1,25 +1,46 @@
 let state = loadState();
 
-const STATE_VERSION = 2;
+const STATE_VERSION = 3;
 
 function migrateStateIfNeeded() {
-  if ((state.stateVersion || 0) >= STATE_VERSION) return;
+  const version = state.stateVersion || 0;
+  if (version >= STATE_VERSION) return;
 
-  state.workoutTemplate = [];
-  state.dailyWorkouts = {};
-  state.selectedRoutineId = null;
-  state.selectedRoutineName = null;
-  if (!state.mealRecommendations) state.mealRecommendations = {};
-
-  const today = todayDateStr();
-  if (state.setupStep === "complete" && state.nutrition?.calories?.target) {
-    state.mealRecommendations[today] = generateMealPlanRecommendation(state, today);
-    const hasMeals = (state.mealLog || []).some(
-      (m) => m.date === today && ["breakfast", "lunch", "dinner"].includes(m.mealType)
-    );
-    if (!hasMeals && state.mealRecommendations[today]) {
-      applyMealRecommendation(state, state.mealRecommendations[today]);
+  if (version < 2) {
+    state.workoutTemplate = [];
+    state.dailyWorkouts = {};
+    state.selectedRoutineId = null;
+    state.selectedRoutineName = null;
+    if (!state.mealRecommendations) state.mealRecommendations = {};
+    const today = todayDateStr();
+    if (state.setupStep === "complete" && state.nutrition?.calories?.target) {
+      state.mealRecommendations[today] = generateMealPlanRecommendation(state, today);
+      const hasMeals = (state.mealLog || []).some(
+        (m) => m.date === today && ["breakfast", "lunch", "dinner"].includes(m.mealType)
+      );
+      if (!hasMeals && state.mealRecommendations[today]) {
+        applyMealRecommendation(state, state.mealRecommendations[today]);
+      }
     }
+  }
+
+  if (version < 3 && state.profile) {
+    if (state.profile.skeletalMuscle == null && state.profile.bodyFat != null) {
+      const est = estimateSkeletalMuscle(
+        state.profile.weight,
+        state.profile.bodyFat,
+        state.profile.gender
+      );
+      if (est != null) state.profile.skeletalMuscle = est;
+    }
+    if (state.profile.skeletalMuscle != null && state.profile.startSkeletalMuscle == null) {
+      state.profile.startSkeletalMuscle = state.profile.skeletalMuscle;
+    }
+    (state.weightHistory || []).forEach((r) => {
+      if (r.skeletalMuscle == null && r.bodyFat != null) {
+        r.skeletalMuscle = estimateSkeletalMuscle(r.weight, r.bodyFat, state.profile.gender);
+      }
+    });
   }
 
   state.stateVersion = STATE_VERSION;
@@ -93,14 +114,24 @@ function initSetupFlow() {
       return;
     }
 
+    const smmRaw = fd.get("skeletalMuscle");
+    const bodyFatVal = fd.get("bodyFat") ? Number(fd.get("bodyFat")) : null;
+    const weightVal = Number(fd.get("weight"));
+    let skeletalMuscle = smmRaw ? Number(smmRaw) : null;
+    if (skeletalMuscle == null && bodyFatVal != null) {
+      skeletalMuscle = estimateSkeletalMuscle(weightVal, bodyFatVal, fd.get("gender"));
+    }
+
     state.profile = {
       name: fd.get("name").trim(),
       age: Number(fd.get("age")),
       gender: fd.get("gender"),
       height: Number(fd.get("height")),
-      weight: Number(fd.get("weight")),
-      startWeight: Number(fd.get("weight")),
-      bodyFat: fd.get("bodyFat") ? Number(fd.get("bodyFat")) : null,
+      weight: weightVal,
+      startWeight: weightVal,
+      bodyFat: bodyFatVal,
+      skeletalMuscle,
+      startSkeletalMuscle: skeletalMuscle,
       experience: fd.get("experience"),
       purpose: fd.get("purpose"),
       availableDays: days,
@@ -118,6 +149,14 @@ function initSetupFlow() {
       targetInput.value = state.profile.weight + 3;
     } else if (targetInput) {
       targetInput.value = state.profile.weight;
+    }
+
+    const smmTargetInput = document.querySelector('#goals-form [name="targetSkeletalMuscle"]');
+    if (smmTargetInput && state.profile.skeletalMuscle != null) {
+      smmTargetInput.value =
+        state.profile.purpose === "근비대"
+          ? Math.round((state.profile.skeletalMuscle + 2) * 10) / 10
+          : state.profile.skeletalMuscle;
     }
 
     showSetupPage("goals");
@@ -138,6 +177,9 @@ function initSetupFlow() {
     state.goals = {
       targetWeight: Number(fd.get("targetWeight")),
       targetBodyFat: fd.get("targetBodyFat") ? Number(fd.get("targetBodyFat")) : null,
+      targetSkeletalMuscle: fd.get("targetSkeletalMuscle")
+        ? Number(fd.get("targetSkeletalMuscle"))
+        : null,
       periodMonths: Number(fd.get("periodMonths")),
       workoutGoal: fd.get("workoutGoal").trim(),
       weeklyWorkouts: Number(fd.get("weeklyWorkouts")),
@@ -160,6 +202,7 @@ function prefillOnboardingForm() {
   f.height.value = p.height;
   f.weight.value = p.weight;
   f.bodyFat.value = p.bodyFat ?? "";
+  f.skeletalMuscle.value = p.skeletalMuscle ?? "";
   f.experience.value = p.experience;
   f.purpose.value = p.purpose;
   f.availableTime.value = p.availableTime;
@@ -175,6 +218,7 @@ function prefillGoalsForm() {
   const g = state.goals;
   f.targetWeight.value = g.targetWeight;
   f.targetBodyFat.value = g.targetBodyFat ?? "";
+  f.targetSkeletalMuscle.value = g.targetSkeletalMuscle ?? "";
   f.periodMonths.value = g.periodMonths;
   f.workoutGoal.value = g.workoutGoal;
   f.weeklyWorkouts.value = g.weeklyWorkouts;
@@ -228,6 +272,7 @@ async function runAiGeneration() {
       date: today,
       weight: state.profile.weight,
       bodyFat: state.profile.bodyFat ?? null,
+      skeletalMuscle: state.profile.skeletalMuscle ?? null,
     },
   ];
   state.setupStep = "complete";
@@ -373,6 +418,22 @@ function renderBodyCharts() {
     lineColor: "#2563eb",
     emptyMessage: "체지방률을 2회 이상 기록하면 그래프가 표시됩니다.",
   });
+
+  const smmData = getSkeletalMuscleChartData(state);
+  renderSvgLineChart("log-smm-chart", {
+    data: smmData,
+    goalValue: goals?.targetSkeletalMuscle ?? getTargetSkeletalMuscle(state),
+    unit: "kg",
+    lineColor: "#7c3aed",
+    emptyMessage: "골격근량을 2회 이상 기록하면 그래프가 표시됩니다.",
+  });
+  renderSvgLineChart("smm-chart", {
+    data: smmData,
+    goalValue: goals?.targetSkeletalMuscle ?? getTargetSkeletalMuscle(state),
+    unit: "kg",
+    lineColor: "#7c3aed",
+    emptyMessage: "골격근량을 2회 이상 기록하면 그래프가 표시됩니다.",
+  });
 }
 
 function renderMetricsTable() {
@@ -381,14 +442,14 @@ function renderMetricsTable() {
 
   const rows = getSortedBodyMetrics(state);
   if (rows.length === 0) {
-    el.innerHTML = `<p class="empty-state">체중·체지방률 기록이 없습니다.</p>`;
+    el.innerHTML = `<p class="empty-state">체성분 기록이 없습니다.</p>`;
     return;
   }
 
   el.innerHTML = `
     <table class="metrics-table">
       <thead>
-        <tr><th>날짜</th><th>체중</th><th>체지방률</th><th></th></tr>
+        <tr><th>날짜</th><th>체중</th><th>체지방률</th><th>골격근량</th><th></th></tr>
       </thead>
       <tbody>
         ${rows
@@ -400,6 +461,7 @@ function renderMetricsTable() {
             <td>${formatChartDate(r.date)}</td>
             <td>${r.weight}kg</td>
             <td>${r.bodyFat != null ? r.bodyFat + "%" : "-"}</td>
+            <td>${r.skeletalMuscle != null ? r.skeletalMuscle + "kg" : "-"}</td>
             <td>
               <button type="button" class="btn-icon edit-metric" data-date="${r.date}" title="수정">✏️</button>
               <button type="button" class="btn-icon delete-metric" data-date="${r.date}" title="삭제">🗑️</button>
@@ -425,11 +487,14 @@ function editBodyMetric(dateStr) {
   if (weight === null) return;
   const bodyFat = prompt("체지방률 (%) — 비우면 유지:", row.bodyFat ?? "");
   if (bodyFat === null) return;
+  const smm = prompt("골격근량 (kg) — 비우면 유지:", row.skeletalMuscle ?? "");
+  if (smm === null) return;
   upsertBodyMetric(
     state,
     dateStr,
     Number(weight),
-    bodyFat === "" ? row.bodyFat : Number(bodyFat)
+    bodyFat === "" ? row.bodyFat : Number(bodyFat),
+    smm === "" ? row.skeletalMuscle : Number(smm)
   );
   saveState(state);
   renderAll();
@@ -453,6 +518,7 @@ function prefillBodyForm() {
   form.recordDate.max = todayDateStr();
   form.weight.value = row?.weight ?? state.profile?.weight ?? "";
   form.bodyFat.value = row?.bodyFat ?? "";
+  form.skeletalMuscle.value = row?.skeletalMuscle ?? "";
 }
 
 function selectDate(dateStr) {
@@ -1080,7 +1146,9 @@ function renderToday() {
   const workouts = getWorkoutsForDate(state, dateStr);
 
   document.getElementById("coach-message").innerHTML = isToday
-    ? state.plan.coachMessage
+    ? typeof computeLiveCoachMessage === "function"
+      ? computeLiveCoachMessage(state)
+      : state.plan.coachMessage
     : `<strong>${dateStr}</strong> 운동 기록입니다.<br>운동 완료 체크, 항목 수정, 메모 편집이 가능합니다.`;
 
   const dash = computeTodayDashboard(state);
@@ -1637,6 +1705,31 @@ function renderGoals() {
             : [],
           emptyHint: "체지방률을 기록하면 목표 달성률이 계산됩니다.",
         });
+
+    document.getElementById("goal-smm-card").innerHTML = gp.hasSmm
+      ? renderGoalMetricCard({
+          title: "골격근량 목표",
+          rows: [
+            [
+              "현재 골격근량",
+              `${gp.skeletalMuscle.current}kg${gp.skeletalMuscle.estimated ? " (추정)" : ""}`,
+            ],
+            ["목표 골격근량", `${gp.skeletalMuscle.target}kg`],
+            ["남은 목표", `${Math.abs(gp.skeletalMuscle.remaining)}kg`],
+          ],
+          pct: gp.skeletalMuscle.pct,
+          color: "#7c3aed",
+        })
+      : renderGoalMetricCard({
+          title: "골격근량 목표",
+          rows: state.goals?.targetSkeletalMuscle
+            ? [
+                ["현재 골격근량", "기록 없음"],
+                ["목표 골격근량", `${state.goals.targetSkeletalMuscle}kg`],
+              ]
+            : [],
+          emptyHint: "골격근량(인바디)을 기록하면 목표 달성률이 계산됩니다.",
+        });
   }
 
   document.getElementById("kr-list").innerHTML =
@@ -1733,6 +1826,7 @@ function renderProfile() {
   if (!state.profile) return;
   const p = state.profile;
   const currentWeight = getLatestBodyMetric(state)?.weight ?? p.weight;
+  const smm = getCurrentSkeletalMuscle(state);
   const fields = [
     ["이름", p.name],
     ["나이", `${p.age}세`],
@@ -1741,6 +1835,10 @@ function renderProfile() {
     ["시작 체중", `${getStartWeight(state)}kg`],
     ["현재 체중", `${currentWeight}kg`],
     ["체지방률", p.bodyFat ? `${p.bodyFat}%` : "-"],
+    [
+      "골격근량",
+      smm.current != null ? `${smm.current}kg${smm.estimated ? " (추정)" : ""}` : "-",
+    ],
     ["운동 경력", p.experience],
     ["운동 목적", p.purpose],
     ["가능 요일", p.availableDays.join(", ")],
@@ -1763,6 +1861,7 @@ function renderProfile() {
     const goalFields = [
       ["목표 체중", `${g.targetWeight}kg`],
       ["목표 체지방률", g.targetBodyFat ? `${g.targetBodyFat}%` : "-"],
+      ["목표 골격근량", g.targetSkeletalMuscle ? `${g.targetSkeletalMuscle}kg` : "-"],
       ["달성 기간", `${g.periodMonths}개월`],
       ["운동 목표", g.workoutGoal],
       ["주간 운동", `${g.weeklyWorkouts}회`],
@@ -1847,16 +1946,21 @@ function initForms() {
       const bodyFatRaw = fd.get("bodyFat");
       const bodyFat =
         bodyFatRaw != null && bodyFatRaw !== "" ? Number(bodyFatRaw) : null;
+      const smmRaw = fd.get("skeletalMuscle");
+      const skeletalMuscle =
+        smmRaw != null && smmRaw !== "" ? Number(smmRaw) : null;
 
       if (dateStr > todayDateStr()) {
         showToast("미래 날짜에는 기록할 수 없습니다");
         return;
       }
 
-      upsertBodyMetric(state, dateStr, weight, bodyFat);
+      upsertBodyMetric(state, dateStr, weight, bodyFat, skeletalMuscle);
 
       let detail = `${weight}kg`;
       if (bodyFat != null) detail += ` · 체지방 ${bodyFat}%`;
+      const saved = state.weightHistory.find((r) => r.date === dateStr);
+      if (saved?.skeletalMuscle != null) detail += ` · 골격근 ${saved.skeletalMuscle}kg`;
 
       state.logHistory.unshift({
         type: "체성분",
@@ -1869,7 +1973,7 @@ function initForms() {
 
       saveState(state);
       renderAll();
-      showToast("체중·체지방률 기록이 저장되었습니다");
+      showToast("체성분 기록이 저장되었습니다");
     });
   }
 }
