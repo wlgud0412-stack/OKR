@@ -12,16 +12,20 @@ const DAY_LABELS = ["월", "화", "수", "목", "금", "토", "일"];
 
 function createEmptyState() {
   return {
+    stateVersion: 2,
     setupStep: "onboarding",
     profile: null,
     goals: null,
     plan: null,
     dailyWorkouts: {},
     workoutTemplate: [],
+    selectedRoutineId: null,
+    selectedRoutineName: null,
     selectedDate: null,
     logHistory: [],
     weightHistory: [],
     mealLog: [],
+    mealRecommendations: {},
     nutrition: {
       calories: { target: 0, current: 0 },
       protein: { target: 0, current: 0 },
@@ -63,7 +67,11 @@ function loadState() {
     }
     if (!merged.selectedDate) merged.selectedDate = todayDateStr();
     if (!merged.workoutTemplate) merged.workoutTemplate = [];
+    if (merged.selectedRoutineId === undefined) merged.selectedRoutineId = null;
+    if (merged.selectedRoutineName === undefined) merged.selectedRoutineName = null;
+    if (!merged.stateVersion) merged.stateVersion = 1;
     if (!merged.mealLog) merged.mealLog = [];
+    if (!merged.mealRecommendations) merged.mealRecommendations = {};
     if (!merged.nutrition) merged.nutrition = createEmptyState().nutrition;
     merged.weightHistory = (merged.weightHistory || []).map((r) => ({
       date: r.date,
@@ -167,7 +175,6 @@ function generatePlan(profile, goals) {
     });
   }
 
-  const todayWorkouts = buildTodayWorkouts(profile, goals);
   const daysStr = profile.availableDays.join(", ");
 
   const coachMessage = `
@@ -178,7 +185,7 @@ function generatePlan(profile, goals) {
     운동 가능: ${daysStr} · ${profile.availableTime}<br><br>
     오늘의 식단: <strong>${tdee} kcal</strong> (단백질 ${protein}g · 탄수 ${carbs}g · 지방 ${fat}g)<br>
     ${goals.customGoal ? `개인 목표: <strong>${goals.customGoal}</strong><br><br>` : "<br>"}
-    오늘 계획을 완료하고 기록을 남겨주세요! 💪`;
+    <strong>오늘 탭</strong>에서 추천 운동 루틴 3가지 중 하나를 선택하고, AI 식단 추천을 확인해주세요! 💪`;
 
   const monthlyWorkouts = goals.weeklyWorkouts * 4;
   const monthlyRunning = goals.weeklyRunningKm * 4;
@@ -189,7 +196,7 @@ function generatePlan(profile, goals) {
     { label: "분기", text: `주 ${goals.weeklyWorkouts}회 습관` },
     { label: "월간", text: `운동 ${monthlyWorkouts}회` },
     { label: "주간", text: `러닝 ${goals.weeklyRunningKm}km` },
-    { label: "오늘", text: todayWorkouts.map((w) => w.title).slice(0, 2).join(" + "), current: true },
+    { label: "오늘", text: "루틴 선택 · 식단 추천", current: true },
   ];
 
   const timeline = [
@@ -210,8 +217,8 @@ function generatePlan(profile, goals) {
     },
     {
       period: "오늘",
-      goal: todayWorkouts.map((w) => w.title).join(" · "),
-      detail: "0 / " + todayWorkouts.length + " 완료",
+      goal: "추천 루틴 선택 · AI 식단",
+      detail: "루틴 · 식단 설정",
       active: true,
     },
   ];
@@ -222,8 +229,6 @@ function generatePlan(profile, goals) {
     coachMessage,
     goalChain,
     timeline,
-    todayWorkouts,
-    workoutTemplate: todayWorkouts.map(({ title, meta }) => ({ title, meta })),
     nutritionTargets: {
       calories: { target: tdee, current: 0 },
       protein: { target: protein, current: 0 },
@@ -283,12 +288,9 @@ function getWorkoutsForDate(state, dateStr, autoCreate = true) {
 
   if (!autoCreate || dateStr > todayDateStr()) return [];
 
-  const template =
-    state.workoutTemplate?.length > 0
-      ? state.workoutTemplate
-      : state.profile && state.goals
-        ? buildTodayWorkouts(state.profile, state.goals).map(({ title, meta }) => ({ title, meta }))
-        : [];
+  if (!state.workoutTemplate?.length) return [];
+
+  const template = state.workoutTemplate;
 
   const newWorkouts = template.map((w, i) => ({
     id: Date.parse(dateStr) + i,
@@ -410,7 +412,10 @@ function countWeekWorkoutDays(state, dateStr) {
 
 function getDailyWorkoutCount(state) {
   if (state.workoutTemplate?.length > 0) return state.workoutTemplate.length;
-  if (state.profile && state.goals) return buildTodayWorkouts(state.profile, state.goals).length;
+  if (state.profile && state.goals) {
+    const options = getWorkoutRoutineOptions(state.profile, state.goals);
+    return options[0]?.exercises?.length ?? 0;
+  }
   return 0;
 }
 

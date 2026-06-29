@@ -1,4 +1,32 @@
 let state = loadState();
+
+const STATE_VERSION = 2;
+
+function migrateStateIfNeeded() {
+  if ((state.stateVersion || 0) >= STATE_VERSION) return;
+
+  state.workoutTemplate = [];
+  state.dailyWorkouts = {};
+  state.selectedRoutineId = null;
+  state.selectedRoutineName = null;
+  if (!state.mealRecommendations) state.mealRecommendations = {};
+
+  const today = todayDateStr();
+  if (state.setupStep === "complete" && state.nutrition?.calories?.target) {
+    state.mealRecommendations[today] = generateMealPlanRecommendation(state, today);
+    const hasMeals = (state.mealLog || []).some(
+      (m) => m.date === today && ["breakfast", "lunch", "dinner"].includes(m.mealType)
+    );
+    if (!hasMeals && state.mealRecommendations[today]) {
+      applyMealRecommendation(state, state.mealRecommendations[today]);
+    }
+  }
+
+  state.stateVersion = STATE_VERSION;
+  saveState(state);
+}
+
+migrateStateIfNeeded();
 let calendarViewMonth = new Date();
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -181,10 +209,16 @@ async function runAiGeneration() {
     goalChain: plan.goalChain,
     timeline: plan.timeline,
   };
-  state.workoutTemplate = plan.workoutTemplate;
-  state.dailyWorkouts = { [today]: plan.todayWorkouts };
+  state.workoutTemplate = [];
+  state.dailyWorkouts = {};
   state.nutrition = plan.nutritionTargets;
   state.mealLog = [];
+  state.mealRecommendations = {};
+  state.mealRecommendations[today] = generateMealPlanRecommendation(
+    { ...state, nutrition: plan.nutritionTargets },
+    today
+  );
+  applyMealRecommendation(state, state.mealRecommendations[today]);
   state.selectedDate = today;
   state.logHistory = [];
   state.weightHistory = [
@@ -618,6 +652,214 @@ function saveActiveWorkouts(workouts) {
   saveState(state);
 }
 
+function renderWorkoutRoutinePicker(dateStr) {
+  const picker = document.getElementById("workout-routine-picker");
+  const list = document.getElementById("workout-list");
+  if (!picker || !list) return;
+
+  const canEdit = dateStr <= todayDateStr();
+  if (!canEdit || !state.profile || !state.goals) {
+    picker.classList.add("hidden");
+    return;
+  }
+
+  const options = getWorkoutRoutineOptions(state.profile, state.goals);
+  picker.classList.remove("hidden");
+  list.innerHTML = "";
+
+  picker.innerHTML = `
+    <div class="routine-picker-header">
+      <h3>추천 운동 루틴 선택</h3>
+      <p class="empty-hint">마음에 드는 루틴을 선택하면 오늘의 운동 목록이 생성됩니다. (세트 4~5세트 기준)</p>
+    </div>
+    <div class="routine-cards">
+      ${options
+        .map(
+          (r) => `
+        <div class="routine-card">
+          <div class="routine-card-top">
+            <span class="routine-tag">${r.tag}</span>
+            <h4>${r.name}</h4>
+            <p>${r.description}</p>
+          </div>
+          <ul class="routine-exercises">
+            ${r.exercises
+              .slice(0, 5)
+              .map((e) => `<li>${escapeHtml(e.title)} <span>${escapeHtml(e.meta)}</span></li>`)
+              .join("")}
+            ${r.exercises.length > 5 ? `<li class="routine-more">+${r.exercises.length - 5}개 더</li>` : ""}
+          </ul>
+          <button type="button" class="btn btn-primary btn-full select-routine-btn" data-routine-id="${r.id}">
+            이 루틴 선택
+          </button>
+        </div>`
+        )
+        .join("")}
+    </div>`;
+
+  picker.querySelectorAll(".select-routine-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const routine = options.find((r) => r.id === btn.dataset.routineId);
+      if (!routine) return;
+      applyWorkoutRoutine(state, routine, dateStr);
+      saveState(state);
+      renderAll();
+      showToast(`「${routine.name}」 루틴이 적용되었습니다`);
+    });
+  });
+}
+
+function bindWorkoutListEvents(workouts) {
+  const workoutList = document.getElementById("workout-list");
+  workoutList.querySelectorAll(".workout-check").forEach((cb) => {
+    cb.addEventListener("change", () => {
+      const id = Number(cb.dataset.id);
+      const updated = workouts.map((w) => (w.id === id ? { ...w, done: cb.checked } : w));
+      saveActiveWorkouts(updated);
+      renderAll();
+    });
+  });
+
+  workoutList.querySelectorAll(".edit-workout").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = Number(btn.dataset.id);
+      const w = workouts.find((x) => x.id === id);
+      if (!w) return;
+      const newTitle = prompt("운동명:", w.title);
+      if (newTitle === null) return;
+      const newMeta = prompt("세부 정보 (세트/횟수 등):", w.meta);
+      if (newMeta === null) return;
+      const updated = workouts.map((x) =>
+        x.id === id ? { ...x, title: newTitle.trim() || x.title, meta: newMeta.trim() || x.meta } : x
+      );
+      saveActiveWorkouts(updated);
+      renderAll();
+      showToast("운동 항목이 수정되었습니다");
+    });
+  });
+
+  workoutList.querySelectorAll(".workout-memo").forEach((input) => {
+    input.addEventListener("change", () => {
+      const id = Number(input.dataset.id);
+      const updated = workouts.map((w) => (w.id === id ? { ...w, memo: input.value } : w));
+      saveActiveWorkouts(updated);
+    });
+    input.addEventListener("click", (e) => e.stopPropagation());
+  });
+}
+
+function renderWorkoutListHtml(workouts) {
+  return workouts
+    .map(
+      (w) => `
+    <li class="workout-item ${w.done ? "done" : ""}" data-id="${w.id}">
+      <label class="check-label">
+        <input type="checkbox" class="workout-check" data-id="${w.id}" ${w.done ? "checked" : ""} />
+        <div class="check-info">
+          <div class="check-title">${escapeHtml(w.title)}</div>
+          <div class="check-meta">${escapeHtml(w.meta)}</div>
+        </div>
+      </label>
+      <div class="workout-item-actions">
+        <button type="button" class="btn-icon edit-workout" data-id="${w.id}" title="수정">✏️</button>
+      </div>
+      <div class="workout-memo-wrap">
+        <input type="text" class="workout-memo" data-id="${w.id}" placeholder="메모 (예: 80kg, 8회)" value="${escapeHtml(w.memo || "")}" />
+      </div>
+    </li>`
+    )
+    .join("");
+}
+
+function renderMealRecommendationPanel(dateStr) {
+  const panel = document.getElementById("meal-recommendation-panel");
+  if (!panel || !state.nutrition) return;
+
+  const canEdit = dateStr <= todayDateStr();
+  if (!canEdit) {
+    panel.innerHTML = "";
+    return;
+  }
+
+  if (!state.mealRecommendations) state.mealRecommendations = {};
+  if (!state.mealRecommendations[dateStr]) {
+    state.mealRecommendations[dateStr] = generateMealPlanRecommendation(state, dateStr);
+    saveState(state);
+  }
+
+  const rec = state.mealRecommendations[dateStr];
+  if (!rec) {
+    panel.innerHTML = "";
+    return;
+  }
+
+  const { totals, targets } = rec;
+  const withinBadge = rec.withinTargets
+    ? `<span class="badge badge-nutrition">목표치 이내 ✓</span>`
+    : `<span class="badge" style="background:rgba(217,119,6,0.12);color:var(--warning)">목표 재조정됨</span>`;
+
+  panel.innerHTML = `
+    <div class="meal-rec-header">
+      <div>
+        <h3>AI 추천 식단</h3>
+        <p class="empty-hint">${rec.source}</p>
+      </div>
+      <div class="meal-rec-actions">
+        ${withinBadge}
+        <button type="button" class="btn btn-ghost btn-sm" id="regen-meal-plan">새 추천</button>
+        <button type="button" class="btn btn-primary btn-sm" id="apply-all-meals">전체 적용</button>
+      </div>
+    </div>
+    <div class="meal-rec-summary">
+      <span>합계 <strong>${totals.calories}</strong> / ${targets.calories} kcal</span>
+      <span>단백질 <strong>${totals.protein}g</strong> / ${targets.protein}g</span>
+      <span>탄수 <strong>${totals.carbs}g</strong> / ${targets.carbs}g</span>
+      <span>지방 <strong>${totals.fat}g</strong> / ${targets.fat}g</span>
+    </div>
+    <div class="meal-rec-grid">
+      ${["breakfast", "lunch", "dinner"]
+        .map((type) => {
+          const meal = rec.meals[type];
+          if (!meal) return "";
+          return `
+          <div class="meal-rec-card">
+            <div class="meal-rec-card-head">
+              <strong>${MEAL_LABELS[type]}</strong>
+              <span>${meal.nutrition.calories} kcal</span>
+            </div>
+            <p class="meal-rec-name">${escapeHtml(meal.name)}</p>
+            <p class="meal-rec-items">${escapeHtml(meal.itemsText)}</p>
+            <p class="meal-rec-macros">P ${meal.nutrition.protein}g · C ${meal.nutrition.carbs}g · F ${meal.nutrition.fat}g</p>
+            <button type="button" class="btn btn-ghost btn-sm btn-full apply-meal-btn" data-meal-type="${type}">${MEAL_LABELS[type]} 적용</button>
+          </div>`;
+        })
+        .join("")}
+    </div>`;
+
+  panel.querySelector("#regen-meal-plan")?.addEventListener("click", () => {
+    state.mealRecommendations[dateStr] = generateMealPlanRecommendation(state, dateStr);
+    saveState(state);
+    renderAll();
+    showToast("새 식단 추천이 생성되었습니다");
+  });
+
+  panel.querySelector("#apply-all-meals")?.addEventListener("click", () => {
+    const n = applyMealRecommendation(state, rec);
+    saveState(state);
+    renderAll();
+    showToast(`${n}끼 식단이 기록에 적용되었습니다`);
+  });
+
+  panel.querySelectorAll(".apply-meal-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const n = applyMealRecommendation(state, rec, [btn.dataset.mealType]);
+      saveState(state);
+      renderAll();
+      showToast(`${MEAL_LABELS[btn.dataset.mealType]} 식단이 적용되었습니다`);
+    });
+  });
+}
+
 function renderToday() {
   if (!state.plan) return;
 
@@ -633,75 +875,53 @@ function renderToday() {
   document.getElementById("today-dashboard").innerHTML = renderDashboardHTML(dash);
 
   const workoutList = document.getElementById("workout-list");
-  if (workouts.length === 0) {
-    workoutList.innerHTML = `<li class="empty-state">이 날짜의 운동 계획이 없습니다.</li>`;
+  const picker = document.getElementById("workout-routine-picker");
+  const canEditWorkout = dateStr <= todayDateStr();
+  const showPicker = workouts.length === 0 && canEditWorkout && state.profile && state.goals;
+
+  if (showPicker) {
+    renderWorkoutRoutinePicker(dateStr);
     document.getElementById("workout-daily-progress").innerHTML = "";
   } else {
-    workoutList.innerHTML = workouts
-      .map(
-        (w) => `
-        <li class="workout-item ${w.done ? "done" : ""}" data-id="${w.id}">
-          <label class="check-label">
-            <input type="checkbox" class="workout-check" data-id="${w.id}" ${w.done ? "checked" : ""} />
-            <div class="check-info">
-              <div class="check-title">${escapeHtml(w.title)}</div>
-              <div class="check-meta">${escapeHtml(w.meta)}</div>
-            </div>
-          </label>
-          <div class="workout-item-actions">
-            <button type="button" class="btn-icon edit-workout" data-id="${w.id}" title="수정">✏️</button>
-          </div>
-          <div class="workout-memo-wrap">
-            <input type="text" class="workout-memo" data-id="${w.id}" placeholder="메모 (예: 80kg, 8회)" value="${escapeHtml(w.memo || "")}" />
-          </div>
-        </li>`
-      )
-      .join("");
+    if (picker) {
+      picker.classList.add("hidden");
+      picker.innerHTML = "";
+    }
 
-    workoutList.querySelectorAll(".workout-check").forEach((cb) => {
-      cb.addEventListener("change", () => {
-        const id = Number(cb.dataset.id);
-        const updated = workouts.map((w) => (w.id === id ? { ...w, done: cb.checked } : w));
-        saveActiveWorkouts(updated);
+    if (workouts.length === 0) {
+      workoutList.innerHTML = `<li class="empty-state">이 날짜의 운동 계획이 없습니다.</li>`;
+      document.getElementById("workout-daily-progress").innerHTML = "";
+    } else {
+      const routineLabel = state.selectedRoutineName
+        ? `<p class="routine-selected-label">선택 루틴: <strong>${escapeHtml(state.selectedRoutineName)}</strong>${
+            canEditWorkout
+              ? ` · <button type="button" class="link-btn" id="change-routine-btn">루틴 변경</button>`
+              : ""
+          }</p>`
+        : canEditWorkout
+          ? `<p class="routine-selected-label"><button type="button" class="link-btn" id="change-routine-btn">루틴 다시 선택</button></p>`
+          : "";
+
+      workoutList.innerHTML = routineLabel + renderWorkoutListHtml(workouts);
+      bindWorkoutListEvents(workouts);
+
+      document.getElementById("change-routine-btn")?.addEventListener("click", () => {
+        if (!confirm("현재 운동 목록을 지우고 루틴을 다시 선택할까요?")) return;
+        delete state.dailyWorkouts[dateStr];
+        state.workoutTemplate = [];
+        saveState(state);
         renderAll();
       });
-    });
 
-    workoutList.querySelectorAll(".edit-workout").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = Number(btn.dataset.id);
-        const w = workouts.find((x) => x.id === id);
-        if (!w) return;
-        const newTitle = prompt("운동명:", w.title);
-        if (newTitle === null) return;
-        const newMeta = prompt("세부 정보 (세트/횟수 등):", w.meta);
-        if (newMeta === null) return;
-        const updated = workouts.map((x) =>
-          x.id === id ? { ...x, title: newTitle.trim() || x.title, meta: newMeta.trim() || x.meta } : x
-        );
-        saveActiveWorkouts(updated);
-        renderAll();
-        showToast("운동 항목이 수정되었습니다");
-      });
-    });
-
-    workoutList.querySelectorAll(".workout-memo").forEach((input) => {
-      input.addEventListener("change", () => {
-        const id = Number(input.dataset.id);
-        const updated = workouts.map((w) => (w.id === id ? { ...w, memo: input.value } : w));
-        saveActiveWorkouts(updated);
-      });
-      input.addEventListener("click", (e) => e.stopPropagation());
-    });
-
-    const wp = computeWorkoutProgress(workouts);
-    document.getElementById("workout-daily-progress").innerHTML = `
-      <div class="daily-progress-header">
-        <span>운동 목표 달성률</span>
-        <strong>${wp.pct}%</strong>
-      </div>
-      ${renderProgressBar("", wp.pct, `완료 ${wp.done}개 / 전체 ${wp.total}개`, "#0d9488")}
-    `;
+      const wp = computeWorkoutProgress(workouts);
+      document.getElementById("workout-daily-progress").innerHTML = `
+        <div class="daily-progress-header">
+          <span>운동 목표 달성률</span>
+          <strong>${wp.pct}%</strong>
+        </div>
+        ${renderProgressBar("", wp.pct, `완료 ${wp.done}개 / 전체 ${wp.total}개`, "#0d9488")}
+      `;
+    }
   }
 
   const wp = computeWorkoutProgress(workouts);
@@ -726,6 +946,7 @@ function renderToday() {
     .join("");
 
   renderNutritionSection(dateStr);
+  renderMealRecommendationPanel(dateStr);
   renderMealSections(dateStr);
 }
 
